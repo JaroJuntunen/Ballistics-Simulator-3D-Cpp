@@ -4,6 +4,7 @@
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_opengl3.h>
+#include <iostream>
 
 bool Application::init() {
 	if (!m_context.init("Ballistics Simulator 3D", 1600, 900))
@@ -17,6 +18,11 @@ bool Application::init() {
 
 	m_camera.setOrbit(45.0f, 30.0f, 1800.0f);
 	m_renderer.initTerrain(m_terrain);
+	m_renderer.initTrajectory();
+
+	double groundZ = m_terrain.heightAt(0.0f, 0.0f);
+	m_launcher = Launcher({0.0, 0.0, groundZ + 1.0}, 0.0, 45.0, 100.0);
+
 	m_running = true;
 	return true;
 }
@@ -62,6 +68,7 @@ void Application::handleInput() {
 	const InputState& in = m_input.state();
 	const ImGuiIO&    io = ImGui::GetIO();
 
+	// Camera controls
 	if (io.WantCaptureMouse)
 		return;
 
@@ -73,6 +80,17 @@ void Application::handleInput() {
 
 	if (in.scrollY != 0.0f)
 		m_camera.zoom(in.scrollY * -40.0f);
+
+	// Fire controls
+	if (in.space) {
+		RigidBodyState initialState = m_launcher.fire(m_projectile);
+		StopFn stop = [&](const RigidBodyState& s) {
+			return BallisticsModel::hasImpacted(s, m_terrain);
+		};
+		m_trajectory = Integrator::simulateSteps(initialState, 0.01, BallisticsModel::derivative, stop);		m_renderer.uploadTrajectory(m_trajectory);
+	}
+
+
 }
 
 void Application::render() {

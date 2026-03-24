@@ -8,7 +8,16 @@ void Renderer::initTerrain(const Terrain& terrain, int samples) {
 	m_terrainPass.init(terrain, samples);
 }
 
-void Renderer::beginFrame(int width, int height, const Camera& camera) {
+void Renderer::initTrajectory(){
+	m_trajectoryPass.init();
+}
+
+void Renderer::uploadTrajectory(const std::vector<RigidBodyState> &points) {
+	m_trajectoryPass.upload(points);
+}
+
+void Renderer::beginFrame(int width, int height, const Camera &camera)
+{
 	glViewport(0, 0, width, height);
 	glClearColor(0.08f, 0.10f, 0.12f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -19,6 +28,7 @@ void Renderer::beginFrame(int width, int height, const Camera& camera) {
 	m_proj = camera.projectionMatrix(aspect);
 
 	m_terrainPass.render(m_view, m_proj);
+	m_trajectoryPass.render(m_view, m_proj);
 }
 
 void Renderer::endFrame() {

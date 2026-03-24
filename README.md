@@ -171,34 +171,20 @@ Ballistics3D/
     │   ├── core/
     │   │   ├── RigidBodyState.hpp        # dvec3 pos/vel/angVel + dquat orientation
     │   │   ├── PhysicsConstants.hpp      # g, ISA constants, Earth omega
-    │   │   ├── Integrator.hpp/.cpp       # integrateRK4() — pure function
-    │   │   └── DerivativeCalc.hpp/.cpp   # computeDerivatives() — all forces combined
-    │   ├── forces/
-    │   │   ├── Gravity.hpp/.cpp
-    │   │   ├── AeroDrag.hpp/.cpp         # 3DOF drag with Cd table interpolation
-    │   │   ├── AeroDrag6DOF.hpp/.cpp     # 6DOF drag from angle of attack (Phase 5)
-    │   │   ├── Coriolis.hpp/.cpp
-    │   │   ├── SpinDrift.hpp/.cpp
-    │   │   └── Wind.hpp/.cpp
+    │   │   └── Integrator.hpp/.cpp       # step() RK4 + simulateSteps() trajectory loop
+    │   ├── physics/
+    │   │   └── BallisticsModel.hpp/.cpp  # derivative() forces, hasImpacted() stop condition
+    │   ├── launchers/
+    │   │   └── Launcher.hpp/.cpp         # Position, angles, muzzle speed — fire() -> initial state
+    │   ├── projectiles/
+    │   │   └── Projectile.hpp/.cpp       # Mass, diameter, drag coefficient
     │   ├── environment/
-    │   │   ├── Atmosphere.hpp/.cpp       # ISA air density, temperature vs altitude
-    │   │   ├── WindField.hpp/.cpp        # 3D wind field with Perlin noise gusts
-    │   │   ├── Terrain.hpp/.cpp          # Terrain interface: height query, subregion mesh extraction
-    │   │   ├── SRTMTerrain.hpp/.cpp      # Real-world backend: loads HGT tile, extracts subregion
-    │   │   └── ProceduralTerrain.hpp/.cpp # Perlin noise fallback backend
-    │   ├── entities/
-    │   │   ├── ProjectileDefinition.hpp  # Immutable, loaded from JSON
-    │   │   ├── LauncherDefinition.hpp    # Immutable, loaded from JSON
-    │   │   ├── LauncherInstance.hpp/.cpp # Placed launcher with position and state
-    │   │   ├── FiredRound.hpp/.cpp       # One trajectory: state history + current state
-    │   │   └── Scenario.hpp/.cpp         # Top-level simulation container
-    │   ├── catalog/
-    │   │   ├── ProjectileCatalog.hpp/.cpp
-    │   │   └── LauncherCatalog.hpp/.cpp
-    │   └── solvers/
-    │       ├── FireSolutionSolver.hpp/.cpp  # Inverse ballistics: target -> launch params
-    │       ├── TOTSolver.hpp/.cpp           # Staggered launch timing for simultaneous impact
-    │       └── AoECalculator.hpp/.cpp       # Coverage optimizer for area targets
+    │   │   ├── Terrain.hpp               # Abstract interface: heightAt(), extent()
+    │   │   └── ProceduralTerrain.hpp/.cpp # Perlin noise terrain backend
+    │   └── solvers/                      # Phase 4+
+    │       ├── FireSolutionSolver.hpp/.cpp
+    │       ├── TOTSolver.hpp/.cpp
+    │       └── AoECalculator.hpp/.cpp
     ├── renderer/
     │   ├── core/
     │   │   ├── GLContext.hpp/.cpp        # SDL3 + GLAD init, OpenGL context, swap
@@ -246,7 +232,7 @@ Ballistics3D/
 - [x] SDL3 window + OpenGL 3.3 Core context via GLAD
 - [x] Orbit camera with pan and zoom
 - [x] Procedurally generated Perlin terrain mesh
-- [ ] Fire projectile under gravity, render trajectory as line strip
+- [x] Fire projectile under gravity, render trajectory as line strip
 
 **Phase 2 — Full 3DOF physics**
 - [ ] RK4 integrator with all force components
@@ -384,6 +370,7 @@ The following features were written by Claude as the initial foundation. All fut
 - GLSL shader loading and compilation
 - Procedural Perlin noise terrain mesh
 - SDL3 input handling
+- TrajectoryPass — GPU upload and line strip rendering of trajectory points
 
 ---
 

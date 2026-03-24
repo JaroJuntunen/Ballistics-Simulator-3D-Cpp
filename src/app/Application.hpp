@@ -1,25 +1,38 @@
 #pragma once
 
+#include <vector>
+
 #include "renderer/core/GLContext.hpp"
 #include "renderer/core/Camera.hpp"
 #include "renderer/Renderer.hpp"
 #include "input/InputHandler.hpp"
 #include "simulation/environment/ProceduralTerrain.hpp"
+#include "simulation/core/RigidBodyState.hpp"
+#include "simulation/physics/BallisticsModel.hpp"
+#include "simulation/launchers/Launcher.hpp"
+#include "simulation/projectiles/Projectile.hpp"
+#include "simulation/core/Integrator.hpp"
+
 
 class Application {
 public:
-    bool init();
-    void run();
+	bool init();
+	void run();
 
 private:
-    void handleInput();
-    void render();
+	void handleInput();
+	void render();
 
-    GLContext          m_context;
-    Camera             m_camera;
-    Renderer           m_renderer;
-    InputHandler       m_input;
-    ProceduralTerrain  m_terrain;
+	GLContext			m_context;
+	Camera				m_camera;
+	Renderer			m_renderer;
+	InputHandler		m_input;
+	ProceduralTerrain	m_terrain;
 
-    bool m_running = false;
+	Launcher					m_launcher	= Launcher({0.0,0.0,0.0}, 0.0, 45.0, 100.0);
+	Projectile					m_projectile = Projectile(45, 0.155, 0.3);
+	std::vector<RigidBodyState>	m_trajectory;
+
+
+	bool m_running = false;
 };

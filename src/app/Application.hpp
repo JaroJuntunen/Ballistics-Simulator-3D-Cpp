@@ -29,10 +29,12 @@ private:
 	InputHandler		m_input;
 	ProceduralTerrain	m_terrain;
 
+	
 	Launcher					m_launcher	= Launcher({0.0,0.0,0.0}, 0.0, 45.0, 100.0);
-	Projectile					m_projectile = Projectile(45, 0.155, 0.3);
+	Projectile					m_projectile = Projectile(45, 0.155, 0.3, 3.937007874, 1.7);
 	std::vector<RigidBodyState>	m_trajectory;
-
+	
+	Wind	m_wind;
 
 	bool m_running = false;
 };

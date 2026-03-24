@@ -235,12 +235,12 @@ Ballistics3D/
 - [x] Fire projectile under gravity, render trajectory as line strip
 
 **Phase 2 — Full 3DOF physics**
-- [ ] RK4 integrator with all force components
+- [x] RK4 integrator with all force components
 - [ ] Aerodynamic drag with Cd table interpolation
-- [ ] ISA altitude-varying air density
-- [ ] 3D wind field with Perlin noise gusts
-- [ ] Coriolis effect (latitude input, correct hemisphere deflection)
-- [ ] Spin drift
+- [x] ISA altitude-varying air density
+- [x] 3D wind field with Perlin noise gusts
+- [x] Coriolis effect (latitude input, correct hemisphere deflection)
+- [x] Spin drift
 - [ ] Dear ImGui panels for all parameters
 - [ ] Multiple simultaneous trajectories, ballistic table output
 

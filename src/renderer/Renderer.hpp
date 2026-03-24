@@ -5,6 +5,7 @@
 #include "passes/TerrainPass.hpp"
 #include "passes/TrajectoryPass.hpp"
 #include "simulation/environment/Terrain.hpp"
+#include "simulation/environment/wind.hpp"
 
 // Drives the OpenGL frame. Owns all render passes (added per phase).
 // beginFrame: clear buffers, set viewport, store view/proj matrices.

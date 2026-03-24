@@ -19,9 +19,8 @@ bool Application::init() {
 	m_camera.setOrbit(45.0f, 30.0f, 1800.0f);
 	m_renderer.initTerrain(m_terrain);
 	m_renderer.initTrajectory();
-
 	double groundZ = m_terrain.heightAt(0.0f, 0.0f);
-	m_launcher = Launcher({0.0, 0.0, groundZ + 1.0}, 0.0, 45.0, 100.0);
+	m_launcher = Launcher({0.0, 0.0, groundZ + 1.0}, 0.0, 30.0, 800.0);
 
 	m_running = true;
 	return true;
@@ -35,13 +34,13 @@ void Application::run() {
 		Uint64 now = SDL_GetPerformanceCounter();
 		float  dt  = static_cast<float>(now - prev) / freq;
 		prev = now;
-		(void)dt; // unused until physics are added
 
+		m_wind.passWindTime(dt);
 		m_input.poll(m_context.window());
 
 		if (m_input.state().quit)
 			m_running = false;
-
+		
 		handleInput();
 
 		ImGui_ImplOpenGL3_NewFrame();
@@ -73,7 +72,7 @@ void Application::handleInput() {
 		return;
 
 	if (in.mouseLeft)
-		m_camera.orbit(in.mouseDeltaX * 0.4f, in.mouseDeltaY * 0.4f);
+		m_camera.orbit(-in.mouseDeltaX * 0.4f, in.mouseDeltaY * 0.4f);
 
 	if (in.mouseRight)
 		m_camera.pan(in.mouseDeltaX, in.mouseDeltaY);
@@ -87,7 +86,9 @@ void Application::handleInput() {
 		StopFn stop = [&](const RigidBodyState& s) {
 			return BallisticsModel::hasImpacted(s, m_terrain);
 		};
-		m_trajectory = Integrator::simulateSteps(initialState, 0.01, BallisticsModel::derivative, stop);		m_renderer.uploadTrajectory(m_trajectory);
+		m_trajectory = Integrator::simulateSteps(initialState, m_projectile, m_wind, m_launcher.getLatitudeInRad(), 0.01, BallisticsModel::derivative, stop);
+		std::cout << "projectile trejectory length : " << m_trajectory.size() << "\n";
+		m_renderer.uploadTrajectory(m_trajectory);
 	}
 
 

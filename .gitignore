@@ -1,3 +1,13 @@
+# Build directory
+build/
+
+# ImGui layout save file
+imgui.ini
+
+# VS Code — keep settings.json (it has compile_commands path), ignore the rest
+.vscode/*
+!.vscode/settings.json
+
 # Prerequisites
 *.d
 
@@ -37,5 +47,5 @@
 *.out
 *.app
 
-# debug information files
+# Debug information files
 *.dwo

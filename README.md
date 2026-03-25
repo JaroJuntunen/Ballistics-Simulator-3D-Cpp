@@ -37,7 +37,7 @@ Drag acts opposite to the velocity vector relative to wind:
 vRel    = v_projectile - v_wind
 Fd_vec  = -0.5 * Cd * rho * A * |vRel| * vRel
 ```
-Cd is looked up from a velocity-indexed table and interpolated, rather than treated as a constant.
+Cd is looked up from a velocity-indexed table and linearly interpolated between the two nearest entries. The table covers the full velocity range from subsonic through supersonic, including the transonic drag spike around 350–450 m/s where wave drag appears. Currently hardcoded per projectile type; will be loaded from JSON catalog in Phase 3.
 
 **Aerodynamic drag (6DOF, Phase 5)**
 
@@ -170,9 +170,9 @@ Ballistics3D/
     ├── simulation/
     │   ├── core/
     │   │   ├── RigidBodyState.hpp        # dvec3 pos/vel/angVel + dquat orientation
-    │   │   ├── PhysicsConstants.hpp      # g, ISA constants, Earth omega
     │   │   └── Integrator.hpp/.cpp       # step() RK4 + simulateSteps() trajectory loop
     │   ├── physics/
+    │   │   ├── PhysicsConstants.hpp      # g, ISA constants, Earth omega
     │   │   └── BallisticsModel.hpp/.cpp  # derivative() forces, hasImpacted() stop condition
     │   ├── launchers/
     │   │   └── Launcher.hpp/.cpp         # Position, angles, muzzle speed — fire() -> initial state
@@ -180,7 +180,8 @@ Ballistics3D/
     │   │   └── Projectile.hpp/.cpp       # Mass, diameter, drag coefficient
     │   ├── environment/
     │   │   ├── Terrain.hpp               # Abstract interface: heightAt(), extent()
-    │   │   └── ProceduralTerrain.hpp/.cpp # Perlin noise terrain backend
+    │   │   ├── ProceduralTerrain.hpp/.cpp # Perlin noise terrain backend
+    │   │   └── wind.hpp/.cpp             # 3D wind with Perlin noise gusts
     │   └── solvers/                      # Phase 4+
     │       ├── FireSolutionSolver.hpp/.cpp
     │       ├── TOTSolver.hpp/.cpp
@@ -236,7 +237,7 @@ Ballistics3D/
 
 **Phase 2 — Full 3DOF physics**
 - [x] RK4 integrator with all force components
-- [ ] Aerodynamic drag with Cd table interpolation
+- [x] Aerodynamic drag with Cd table interpolation
 - [x] ISA altitude-varying air density
 - [x] 3D wind field with Perlin noise gusts
 - [x] Coriolis effect (latitude input, correct hemisphere deflection)

@@ -22,6 +22,7 @@ bool Application::init() {
 	double groundZ = m_terrain.heightAt(0.0f, 0.0f);
 	m_launcher = Launcher({0.0, 0.0, groundZ + 1.0}, 0.0, 45.0, 900.0);
 	m_projectile = Projectile(48, 0.155, 0.3, 0.322580645, 1.2);
+	m_projectile.setDragTable(loadDragTable());
 	m_running = true;
 	return true;
 }
@@ -102,4 +103,27 @@ void Application::render() {
 	m_renderer.endFrame();
 
 	m_context.swapBuffers();
+}
+
+std::shared_ptr<std::vector<dragCdTableEntry>> Application::loadDragTable()
+{
+	std::vector<dragCdTableEntry> newTable;
+	// Example hardcoded drag coefficient table entries
+	newTable.push_back(dragCdTableEntry{0.0,    0.17});
+	newTable.push_back(dragCdTableEntry{100.0,  0.17});
+	newTable.push_back(dragCdTableEntry{200.0,  0.18});
+	newTable.push_back(dragCdTableEntry{300.0,  0.23});
+	newTable.push_back(dragCdTableEntry{350.0,  0.36});
+	newTable.push_back(dragCdTableEntry{400.0,  0.47});
+	newTable.push_back(dragCdTableEntry{450.0,  0.43});
+	newTable.push_back(dragCdTableEntry{500.0,  0.38});
+	newTable.push_back(dragCdTableEntry{600.0,  0.33});
+	newTable.push_back(dragCdTableEntry{700.0,  0.29});
+	newTable.push_back(dragCdTableEntry{800.0,  0.26});
+	newTable.push_back(dragCdTableEntry{900.0,  0.24});
+	newTable.push_back(dragCdTableEntry{1000.0, 0.22});
+
+
+
+	return std::make_shared<std::vector<dragCdTableEntry>>(newTable);
 }

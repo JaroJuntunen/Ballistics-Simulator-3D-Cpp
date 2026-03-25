@@ -27,7 +27,7 @@ RigidBodyState BallisticsModel::derivative(const RigidBodyState& state ,const Pr
 	RigidBodyState result;
 	if (velocity < 1e-6) return result;
 
-	double	dragForce = 0.5f * projectile.getDragCoefficient() * relativeAirDencity * area * (velocity * velocity);
+	double	dragForce = 0.5f * projectile.getDragCoefficientAtVelocity(velocity) * relativeAirDencity * area * (velocity * velocity);
 	double	deceleration = dragForce / projectile.getMass();
 
 

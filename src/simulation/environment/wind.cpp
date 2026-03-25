@@ -6,7 +6,7 @@ Wind::Wind()
 	m_baseWindSpeed.x	= 0.0f;
 	m_baseWindSpeed.y	= 0.0f;
 	m_baseWindSpeed.z	= 0.0f;
-	m_windGustSeverity	= 1.0f;
+	m_windGustSeverity	= 1.5f;
 	m_gustFrequency		= 0.3f;
 	m_time	= 0.0f;
 }

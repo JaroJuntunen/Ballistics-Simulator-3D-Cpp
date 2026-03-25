@@ -24,6 +24,14 @@ public:
 	double	getStabilityFactor()	const { return m_stabilityFactor; }
 	double	getDragCoefficientAtVelocity(double velocity) const;
 
+	// setters
+	void	setMass(double mass)						{ m_mass = mass; }
+	void	setDiameter(double diameter)				{ m_diameter = diameter; }
+	void	setDragCoefficient(double cd)				{ m_dragCoefficient = cd; }
+	void	setTwistRate(double twistRate)				{ m_twistRate = twistRate; }
+	void	setStabilityFactor(double stabilityFactor)	{ m_stabilityFactor = stabilityFactor; }
+
+
 	//setters
 	void	setDragTable(std::shared_ptr<std::vector<dragCdTableEntry>> dragtable) { m_dragtable = dragtable; }
 

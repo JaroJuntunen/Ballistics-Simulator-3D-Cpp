@@ -23,8 +23,11 @@ private:
 	void handleInput();
 	void render();
 
+	void	initializeDearGUI();
+	void	updateDearGUI();
+	
 	std::shared_ptr<std::vector<dragCdTableEntry>> loadDragTable(); // Curently hardcoded table.
-
+	
 	GLContext			m_context;
 	Camera				m_camera;
 	Renderer			m_renderer;

@@ -242,7 +242,7 @@ Ballistics3D/
 - [x] 3D wind field with Perlin noise gusts
 - [x] Coriolis effect (latitude input, correct hemisphere deflection)
 - [x] Spin drift
-- [ ] Dear ImGui panels for all parameters
+- [x] Dear ImGui panels for all parameters
 - [ ] Multiple simultaneous trajectories, ballistic table output
 
 **Phase 3 — Catalog, scenario system, and real terrain**

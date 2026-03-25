@@ -9,13 +9,7 @@
 bool Application::init() {
 	if (!m_context.init("Ballistics Simulator 3D", 1600, 900))
 		return false;
-
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGui::StyleColorsDark();
-	ImGui_ImplSDL3_InitForOpenGL(m_context.window(), m_context.glContext());
-	ImGui_ImplOpenGL3_Init("#version 330 core");
-
+	
 	m_camera.setOrbit(45.0f, 30.0f, 1800.0f);
 	m_renderer.initTerrain(m_terrain, m_terrain.extent() / 100);
 	m_renderer.initTrajectory();
@@ -24,6 +18,7 @@ bool Application::init() {
 	m_projectile = Projectile(48, 0.155, 0.3, 0.322580645, 1.2);
 	m_projectile.setDragTable(loadDragTable());
 	m_running = true;
+	initializeDearGUI();
 	return true;
 }
 
@@ -38,23 +33,11 @@ void Application::run() {
 
 		m_wind.passWindTime(dt);
 		m_input.poll(m_context.window());
-
 		if (m_input.state().quit)
-			m_running = false;
+		m_running = false;
 		
+		updateDearGUI();
 		handleInput();
-
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplSDL3_NewFrame();
-		ImGui::NewFrame();
-
-		ImGui::Begin("Ballistics Simulator 3D");
-		ImGui::Text("Phase 1 — Foundation");
-		ImGui::Separator();
-		ImGui::Text("Left drag : orbit");
-		ImGui::Text("Right drag: pan");
-		ImGui::Text("Scroll    : zoom");
-		ImGui::End();
 
 		render();
 	}
@@ -88,7 +71,6 @@ void Application::handleInput() {
 			return BallisticsModel::hasImpacted(s, m_terrain);
 		};
 		m_trajectory = Integrator::simulateSteps(initialState, m_projectile, m_wind, m_launcher.getLatitudeInRad(), 0.01, BallisticsModel::derivative, stop);
-		std::cout << "projectile trejectory length : " << glm::distance(m_trajectory[m_trajectory.size() - 1].position, m_trajectory[0].position) << "\n";
 		m_renderer.uploadTrajectory(m_trajectory);
 	}
 
@@ -101,8 +83,88 @@ void Application::render() {
 
 	m_renderer.beginFrame(w, h, m_camera);
 	m_renderer.endFrame();
-
+	
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	m_context.swapBuffers();
+
+}
+
+void Application::initializeDearGUI()
+{
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGui::StyleColorsDark();
+	ImGui_ImplSDL3_InitForOpenGL(m_context.window(), m_context.glContext());
+	ImGui_ImplOpenGL3_Init("#version 330 core");
+}
+
+void Application::updateDearGUI()
+{
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplSDL3_NewFrame();
+	ImGui::NewFrame();
+
+	ImGui::SetNextWindowPos({10, 24}, ImGuiCond_FirstUseEver);
+	ImGui::Begin("Simulator", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+
+	if (ImGui::CollapsingHeader("Launcher")) {
+		float azimuth   = (float)m_launcher.getAzimuth();
+		float elevation = (float)m_launcher.getElevation();
+		float speed     = (float)m_launcher.getSpeed();
+		float latitude  = (float)m_launcher.getLatitude();
+		ImGui::DragFloat("Azimuth (deg)",         &azimuth,   0.5f,  -180.0f, 180.0f);
+		ImGui::DragFloat("Elevation (deg)",        &elevation, 0.5f,     0.0f,  90.0f);
+		ImGui::DragFloat("Muzzle velocity (m/s)", &speed,     1.0f,     1.0f, 2000.0f);
+		ImGui::DragFloat("Latitude (deg)",         &latitude,  0.5f,   -90.0f,  90.0f);
+		m_launcher.setAzimuth((double)azimuth);
+		m_launcher.setElevation((double)elevation);
+		m_launcher.setSpeed((double)speed);
+		m_launcher.setLatitude((double)latitude);
+	}
+
+	if (ImGui::CollapsingHeader("Projectile")) {
+		float mass     = (float)m_projectile.getMass();
+		float diameter = (float)m_projectile.getDiameter();
+		float twist    = (float)m_projectile.getTwistRate();
+		float sf       = (float)m_projectile.getStabilityFactor();
+		ImGui::DragFloat("Mass (kg)",           &mass,     0.01f,  0.01f, 100.0f);
+		ImGui::DragFloat("Diameter (m)",        &diameter, 0.001f, 0.001f,  0.5f);
+		ImGui::DragFloat("Twist rate (rev/m)",  &twist,    0.01f,  0.01f,  10.0f);
+		ImGui::DragFloat("Stability factor",    &sf,       0.01f,  0.5f,    5.0f);
+		m_projectile.setMass((double)mass);
+		m_projectile.setDiameter((double)diameter);
+		m_projectile.setTwistRate((double)twist);
+		m_projectile.setStabilityFactor((double)sf);
+	}
+
+	if (ImGui::CollapsingHeader("Wind")) {
+		glm::dvec3 base = m_wind.getBaseWindSpeed();
+		float windX = (float)base.x;
+		float windY = (float)base.y;
+		float windZ = (float)base.z;
+		float gustSeverity  = (float)m_wind.getWindGustSeverity();
+		float gustFrequency = (float)m_wind.getGustFrequency();
+		ImGui::SeparatorText("Base wind");
+		ImGui::DragFloat("Wind X (m/s)", &windX, 0.1f, -100.0f, 100.0f);
+		ImGui::DragFloat("Wind Y (m/s)", &windY, 0.1f, -100.0f, 100.0f);
+		ImGui::DragFloat("Wind Z (m/s)", &windZ, 0.1f,  -50.0f,  50.0f);
+		ImGui::SeparatorText("Gusts");
+		ImGui::DragFloat("Gust severity",  &gustSeverity,  0.1f,  0.0f, 50.0f);
+		ImGui::DragFloat("Gust frequency", &gustFrequency, 0.01f, 0.0f,  2.0f);
+		m_wind.setBaseWindSpeed({(double)windX, (double)windY, (double)windZ});
+		m_wind.setWindGustSeverity((double)gustSeverity);
+		m_wind.setGustFrequency((double)gustFrequency);
+	}
+
+	if (!m_trajectory.empty()) {
+		ImGui::Separator();
+		ImGui::Text("Trajectory points : %d", (int)m_trajectory.size());
+		double dist = glm::distance(m_trajectory.back().position, m_trajectory.front().position);
+		ImGui::Text("Impact distance   : %.1f m", dist);
+	}
+
+	ImGui::End();
 }
 
 std::shared_ptr<std::vector<dragCdTableEntry>> Application::loadDragTable()

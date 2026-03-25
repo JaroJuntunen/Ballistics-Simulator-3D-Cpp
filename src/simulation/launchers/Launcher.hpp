@@ -12,11 +12,18 @@ public:
 	RigidBodyState fire(Projectile projectile) const;
 
 	// Getters
-	glm::dvec3	getPosition() const { return m_position; }
-	double		getAzimuth() const { return m_azimuth; }
-	double		getElevation() const { return m_elevation; }
-	double		getSpeed() const { return m_speed; }
-	double		getLatitudeInRad() const {return (m_latitude * Physics::deg2rad);}
+	glm::dvec3	getPosition()     const { return m_position; }
+	double		getAzimuth()      const { return m_azimuth; }
+	double		getElevation()    const { return m_elevation; }
+	double		getSpeed()        const { return m_speed; }
+	double		getLatitude()     const { return m_latitude; }
+	double		getLatitudeInRad() const { return m_latitude * Physics::deg2rad; }
+
+	// Setters
+	void		setAzimuth(double azimuth)    { m_azimuth = azimuth; }
+	void		setElevation(double elevation) { m_elevation = elevation; }
+	void		setSpeed(double speed)         { m_speed = speed; }
+	void		setLatitude(double latitude)   { m_latitude = latitude; }
 
 private:
 	glm::dvec3	m_position = {0.0, 0.0, 0.0};

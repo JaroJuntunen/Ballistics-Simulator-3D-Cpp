@@ -14,7 +14,7 @@ public:
 	double	getStabilityFactor()	const { return m_stabilityFactor; }
 
 private:
-	double	m_mass            = 0.0;
+	double	m_mass            = 0.0; // in kg
 	double	m_diameter        = 0.0;
 	double	m_dragCoefficient = 0.0;
 	double	m_twistRate       = 3.937007874; //revolutions per meter

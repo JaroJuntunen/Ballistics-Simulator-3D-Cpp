@@ -17,11 +17,11 @@ bool Application::init() {
 	ImGui_ImplOpenGL3_Init("#version 330 core");
 
 	m_camera.setOrbit(45.0f, 30.0f, 1800.0f);
-	m_renderer.initTerrain(m_terrain);
+	m_renderer.initTerrain(m_terrain, m_terrain.extent() / 100);
 	m_renderer.initTrajectory();
 	double groundZ = m_terrain.heightAt(0.0f, 0.0f);
-	m_launcher = Launcher({0.0, 0.0, groundZ + 1.0}, 0.0, 30.0, 800.0);
-
+	m_launcher = Launcher({0.0, 0.0, groundZ + 1.0}, 0.0, 45.0, 900.0);
+	m_projectile = Projectile(48, 0.155, 0.3, 0.322580645, 1.2);
 	m_running = true;
 	return true;
 }
@@ -87,7 +87,7 @@ void Application::handleInput() {
 			return BallisticsModel::hasImpacted(s, m_terrain);
 		};
 		m_trajectory = Integrator::simulateSteps(initialState, m_projectile, m_wind, m_launcher.getLatitudeInRad(), 0.01, BallisticsModel::derivative, stop);
-		std::cout << "projectile trejectory length : " << m_trajectory.size() << "\n";
+		std::cout << "projectile trejectory length : " << glm::distance(m_trajectory[m_trajectory.size() - 1].position, m_trajectory[0].position) << "\n";
 		m_renderer.uploadTrajectory(m_trajectory);
 	}
 

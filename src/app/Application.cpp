@@ -187,6 +187,9 @@ void Application::updateDearGUI()
 					if (ImGui::Selectable(m_launcherCatalog[i].c_str(), selected)) {
 						m_selectedLauncher = i;
 						m_launcher = loadLauncherFromJson(m_launcherCatalog[i]);
+						glm::dvec3 pos = m_launcher.getPosition();
+						pos.z = m_terrain.heightAt(pos.x, pos.y) + 1.0;
+						m_launcher.setPosition(pos);
 						if (!m_compatibleProjectiles.empty()) {
 							m_projectile = loadProjectileFromJson(m_compatibleProjectiles[0].filename);
 							m_launcher.setSpeed(m_compatibleProjectiles[0].muzzleVelocity);

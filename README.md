@@ -170,14 +170,14 @@ Ballistics3D/
     ├── simulation/
     │   ├── core/
     │   │   ├── RigidBodyState.hpp        # dvec3 pos/vel/angVel + dquat orientation
-    │   │   └── Integrator.hpp/.cpp       # step() RK4 + simulateSteps() trajectory loop
+    │   │   └── Integrator.hpp/.cpp       # step() RK4 + simulateSteps(); Trajectory typedef
     │   ├── physics/
     │   │   ├── PhysicsConstants.hpp      # g, ISA constants, Earth omega
     │   │   └── BallisticsModel.hpp/.cpp  # derivative() forces, hasImpacted() stop condition
     │   ├── launchers/
     │   │   └── Launcher.hpp/.cpp         # Position, angles, muzzle speed — fire() -> initial state
     │   ├── projectiles/
-    │   │   └── Projectile.hpp/.cpp       # Mass, diameter, drag coefficient
+    │   │   └── Projectile.hpp/.cpp       # Mass, diameter, velocity-indexed Cd table (DragTable typedef)
     │   ├── environment/
     │   │   ├── Terrain.hpp               # Abstract interface: heightAt(), extent()
     │   │   ├── ProceduralTerrain.hpp/.cpp # Perlin noise terrain backend
@@ -194,7 +194,7 @@ Ballistics3D/
     │   │   └── Camera.hpp/.cpp           # Orbit/pan/zoom, view + projection matrices
     │   ├── passes/
     │   │   ├── TerrainPass.hpp/.cpp
-    │   │   ├── TrajectoryPass.hpp/.cpp   # Path lines and active projectile dots
+    │   │   ├── TrajectoryPass.hpp/.cpp   # Multiple trajectory buffers, per-trajectory color cycling
     │   │   ├── LauncherPass.hpp/.cpp
     │   │   └── MeshPass.hpp/.cpp         # Assimp-loaded projectile meshes (Phase 5)
     │   ├── Renderer.hpp/.cpp             # Owns all passes, drives frame
@@ -243,7 +243,8 @@ Ballistics3D/
 - [x] Coriolis effect (latitude input, correct hemisphere deflection)
 - [x] Spin drift
 - [x] Dear ImGui panels for all parameters
-- [ ] Multiple simultaneous trajectories, ballistic table output
+- [x] Multiple simultaneous trajectories (instant and real-time stepping modes)
+- [ ] Ballistic table output
 
 **Phase 3 — Catalog, scenario system, and real terrain**
 - [ ] JSON projectile and launcher catalogs

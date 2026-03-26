@@ -12,8 +12,16 @@ void Renderer::initTrajectory(){
 	m_trajectoryPass.init();
 }
 
-void Renderer::uploadTrajectory(const std::vector<RigidBodyState> &points) {
-	m_trajectoryPass.upload(points);
+int Renderer::addTrajectory(const std::vector<RigidBodyState>& points) {
+	return m_trajectoryPass.add(points);
+}
+
+void Renderer::updateTrajectory(int index, const std::vector<RigidBodyState>& points) {
+	m_trajectoryPass.update(index, points);
+}
+
+void Renderer::clearTrajectories() {
+	m_trajectoryPass.clearAll();
 }
 
 void Renderer::beginFrame(int width, int height, const Camera &camera)

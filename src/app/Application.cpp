@@ -38,13 +38,27 @@ void Application::run() {
 		
 		updateDearGUI();
 		handleInput();
-
+		iterateProjectilesTrajectories(dt);
 		render();
 	}
 
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplSDL3_Shutdown();
 	ImGui::DestroyContext();
+}
+
+void Application::iterateProjectilesTrajectories(double dt)
+{
+	for(int i = 0; i < m_listOfProjectiles.size(); i++){
+		Projectile& proj = m_listOfProjectiles.at(i);
+		Trajectory& traj = m_listOfTrajectories.at(i);
+
+		if (!proj.getIsImpacted()) {
+			traj.push_back(Integrator::step(traj.back(), proj, m_wind,m_launcher.getLatitudeInRad(), dt, BallisticsModel::derivative));
+			proj.setIsImpacted(BallisticsModel::hasImpacted(traj.back(), m_terrain));
+			m_renderer.updateTrajectory(i, traj);
+		}
+	}
 }
 
 void Application::handleInput() {
@@ -66,12 +80,20 @@ void Application::handleInput() {
 
 	// Fire controls
 	if (in.space) {
-		RigidBodyState initialState = m_launcher.fire(m_projectile);
+		Projectile proj = m_projectile;
+		RigidBodyState initialState = m_launcher.fire(proj);
+		m_listOfProjectiles.push_back(proj);
 		StopFn stop = [&](const RigidBodyState& s) {
 			return BallisticsModel::hasImpacted(s, m_terrain);
 		};
-		m_trajectory = Integrator::simulateSteps(initialState, m_projectile, m_wind, m_launcher.getLatitudeInRad(), 0.01, BallisticsModel::derivative, stop);
-		m_renderer.uploadTrajectory(m_trajectory);
+		if (m_instantFire)
+			m_trajectory = Integrator::simulateSteps(initialState, proj, m_wind, m_launcher.getLatitudeInRad(), 0.01, BallisticsModel::derivative, stop);
+		else {
+			m_trajectory.clear();
+			m_trajectory.push_back(initialState);
+		}
+		m_listOfTrajectories.push_back(m_trajectory);
+		m_renderer.addTrajectory(m_trajectory);
 	}
 
 
@@ -121,6 +143,7 @@ void Application::updateDearGUI()
 		m_launcher.setElevation((double)elevation);
 		m_launcher.setSpeed((double)speed);
 		m_launcher.setLatitude((double)latitude);
+		ImGui::Checkbox("Instant trajectory", &m_instantFire);
 	}
 
 	if (ImGui::CollapsingHeader("Projectile")) {
@@ -156,18 +179,21 @@ void Application::updateDearGUI()
 		m_wind.setWindGustSeverity((double)gustSeverity);
 		m_wind.setGustFrequency((double)gustFrequency);
 	}
+	if (m_listOfTrajectories.size() > 0) {
 
-	if (!m_trajectory.empty()) {
-		ImGui::Separator();
-		ImGui::Text("Trajectory points : %d", (int)m_trajectory.size());
-		double dist = glm::distance(m_trajectory.back().position, m_trajectory.front().position);
-		ImGui::Text("Impact distance   : %.1f m", dist);
+		Trajectory traj = m_listOfTrajectories.back();
+		if (!traj.empty()) {
+			ImGui::Separator();
+			ImGui::Text("Trajectory points : %d", (int)traj.size());
+			double dist = glm::distance(traj.back().position, traj.front().position);
+			ImGui::Text("Impact distance   : %.1f m", dist);
+		}
 	}
 
 	ImGui::End();
 }
 
-std::shared_ptr<std::vector<dragCdTableEntry>> Application::loadDragTable()
+DragTable Application::loadDragTable()
 {
 	std::vector<dragCdTableEntry> newTable;
 	// Example hardcoded drag coefficient table entries

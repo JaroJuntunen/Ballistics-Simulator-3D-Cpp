@@ -12,12 +12,14 @@ RigidBodyState Integrator::step(const RigidBodyState &state, const Projectile& p
 	return newState;
 }
 
-std::vector<RigidBodyState> Integrator::simulateSteps(const RigidBodyState &state, const Projectile& projectile,Wind& wind,double phi, double dt, DerivativeFn deriv, StopFn stop)
+Trajectory Integrator::simulateSteps(const RigidBodyState &state, Projectile& projectile,Wind wind,double phi, double dt, DerivativeFn deriv, StopFn stop)
 {
-	std::vector<RigidBodyState> path;
+	Trajectory path;
 	path.push_back(state);
 	while (!stop(path.back()) && path.size() < 100000) {
+		wind.passWindTime(dt);
 		path.push_back(step(path.back(),projectile,wind,phi, dt, deriv));
 	}
+	projectile.setIsImpacted(true);
 	return (path);
 }

@@ -15,7 +15,9 @@ public:
 	void initTerrain(const Terrain& terrain, int samples = 100);
 	void initTrajectory();
 
-	void uploadTrajectory(const std::vector<RigidBodyState>& points);
+	int  addTrajectory(const std::vector<RigidBodyState>& points);
+	void updateTrajectory(int index, const std::vector<RigidBodyState>& points);
+	void clearTrajectories();
 
 	void beginFrame(int width, int height, const Camera& camera);
 	void endFrame();

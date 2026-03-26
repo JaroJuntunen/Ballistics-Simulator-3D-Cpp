@@ -18,15 +18,16 @@ class Application {
 public:
 	bool init();
 	void run();
-
-private:
+	
+	private:
 	void handleInput();
 	void render();
-
+	
 	void	initializeDearGUI();
 	void	updateDearGUI();
 	
-	std::shared_ptr<std::vector<dragCdTableEntry>> loadDragTable(); // Curently hardcoded table.
+	DragTable loadDragTable(); // Curently hardcoded table.
+	void iterateProjectilesTrajectories(double dt);
 	
 	GLContext			m_context;
 	Camera				m_camera;
@@ -35,9 +36,12 @@ private:
 	ProceduralTerrain	m_terrain;
 
 	
+	bool						m_instantFire = true;
 	Launcher					m_launcher	= Launcher({0.0,0.0,0.0}, 0.0, 45.0, 100.0);
 	Projectile					m_projectile = Projectile(45, 0.155, 0.3, 3.937007874, 1.7);
-	std::vector<RigidBodyState>	m_trajectory;
+	std::vector<Projectile>		m_listOfProjectiles;
+	Trajectory					m_trajectory;
+	std::vector<Trajectory>		m_listOfTrajectories;
 	
 	Wind	m_wind;
 

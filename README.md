@@ -84,8 +84,10 @@ All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion 
 
 ### Scenario system
 - JSON-based projectile and launcher catalogs (`data/projectiles/`, `data/launchers/`)
-- Real cartridge data: 7.62×51mm NATO, 12.7×99mm API, 40mm HE, 81mm mortar
-- Multiple launcher types: M24 SWS, M2HB, M203, M252 mortar
+- Launchers: M109 Paladin (155mm), M252 81mm Mortar
+- Projectiles: 155mm HE, 155mm APHE, 81mm HE M821, 81mm Smoke M375, 81mm Illumination M853
+- Compatible projectile list per launcher with per-projectile muzzle velocity
+- Auto-selects first launcher and projectile on startup
 - Place and orient multiple launchers in the 3D world
 - Save and load scenarios to JSON
 
@@ -178,7 +180,7 @@ Ballistics3D/
     │   ├── launchers/
     │   │   └── Launcher.hpp/.cpp         # Position, angles, muzzle speed — fire() -> initial state
     │   ├── projectiles/
-    │   │   └── Projectile.hpp/.cpp       # Mass, diameter, velocity-indexed Cd table (DragTable typedef)
+    │   │   └── Projectile.hpp/.cpp       # Mass, diameter, velocity-indexed Cd table; DragTable typedef; loaded from JSON
     │   ├── environment/
     │   │   ├── Terrain.hpp               # Abstract interface: heightAt(), extent()
     │   │   ├── ProceduralTerrain.hpp/.cpp # Perlin noise terrain backend
@@ -248,7 +250,8 @@ Ballistics3D/
 - [x] Ballistic table output (range, height, drift, speed, TOF sampled at 500m intervals)
 
 **Phase 3 — Catalog, scenario system, and real terrain**
-- [ ] JSON projectile and launcher catalogs
+- [x] JSON projectile and launcher catalogs
+- [x] Launcher and projectile selection from JSON catalog via ImGui dropdowns
 - [ ] LauncherInstance placement in 3D scene
 - [ ] Scenario container with save/load
 - [ ] SRTM HGT terrain loader: parse tile, extract subregion around scenario, auto-coarsen for large ranges

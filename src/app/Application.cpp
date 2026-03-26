@@ -16,9 +16,19 @@ bool Application::init() {
 	m_renderer.initTerrain(m_terrain, m_terrain.extent() / 100);
 	m_renderer.initTrajectory();
 	double groundZ = m_terrain.heightAt(0.0f, 0.0f);
-	m_launcher = Launcher({0.0, 0.0, groundZ + 1.0}, 0.0, 45.0, 900.0);
-	m_projectile = Projectile(48, 0.155, 0.3, 0.322580645, 1.2);
-	m_projectile.setDragTable(loadDragTable());
+	m_launcherCatalog = loadLauncherCatalog();
+	if (!m_launcherCatalog.empty()) {
+		m_launcher = loadLauncherFromJson(m_launcherCatalog[0]);
+		m_launcher.setPosition({0.0, 0.0, groundZ + 1.0});
+		if (!m_compatibleProjectiles.empty()) {
+			m_projectile = loadProjectileFromJson(m_compatibleProjectiles[0].filename);
+			m_launcher.setSpeed(m_compatibleProjectiles[0].muzzleVelocity);
+		}
+	} else {
+		m_launcher = Launcher({0.0, 0.0, groundZ + 1.0}, 0.0, 45.0, 900.0);
+		m_projectile = Projectile(48, 0.155, 0.3, 0.322580645, 1.2);
+		m_projectile.setDragTable(loadDragTable());
+	}
 	m_running = true;
 	initializeDearGUI();
 	return true;
@@ -169,6 +179,24 @@ void Application::updateDearGUI()
 	ImGui::Begin("Simulator", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
 	if (ImGui::CollapsingHeader("Launcher")) {
+		if (!m_launcherCatalog.empty()) {
+			const std::string& current = m_launcherCatalog[m_selectedLauncher];
+			if (ImGui::BeginCombo("Type##launcher", current.c_str())) {
+				for (int i = 0; i < (int)m_launcherCatalog.size(); ++i) {
+					bool selected = (m_selectedLauncher == i);
+					if (ImGui::Selectable(m_launcherCatalog[i].c_str(), selected)) {
+						m_selectedLauncher = i;
+						m_launcher = loadLauncherFromJson(m_launcherCatalog[i]);
+						if (!m_compatibleProjectiles.empty()) {
+							m_projectile = loadProjectileFromJson(m_compatibleProjectiles[0].filename);
+							m_launcher.setSpeed(m_compatibleProjectiles[0].muzzleVelocity);
+						}
+					}
+					if (selected) ImGui::SetItemDefaultFocus();
+				}
+				ImGui::EndCombo();
+			}
+		}
 		float azimuth   = (float)m_launcher.getAzimuth();
 		float elevation = (float)m_launcher.getElevation();
 		float speed     = (float)m_launcher.getSpeed();
@@ -185,6 +213,21 @@ void Application::updateDearGUI()
 	}
 
 	if (ImGui::CollapsingHeader("Projectile")) {
+		if (!m_compatibleProjectiles.empty()) {
+			const std::string& current = m_compatibleProjectiles[m_selectedProjectile].filename;
+			if (ImGui::BeginCombo("Type##projectile", current.c_str())) {
+				for (int i = 0; i < (int)m_compatibleProjectiles.size(); ++i) {
+					bool selected = (m_selectedProjectile == i);
+					if (ImGui::Selectable(m_compatibleProjectiles[i].filename.c_str(), selected)) {
+						m_selectedProjectile = i;
+						m_projectile = loadProjectileFromJson(m_compatibleProjectiles[i].filename);
+						m_launcher.setSpeed(m_compatibleProjectiles[i].muzzleVelocity);
+					}
+					if (selected) ImGui::SetItemDefaultFocus();
+				}
+				ImGui::EndCombo();
+			}
+		}
 		float mass     = (float)m_projectile.getMass();
 		float diameter = (float)m_projectile.getDiameter();
 		float twist    = (float)m_projectile.getTwistRate();
@@ -287,6 +330,68 @@ void Application::updateDearGUI()
 	ImGui::End();
 }
 
+std::vector<std::string> Application::loadLauncherCatalog()
+{
+	std::vector<std::string> launcherCatalog;
+	const std::string path = "data/launchers";
+	if (!std::filesystem::exists(path)) return launcherCatalog;
+	for (const auto& entry : std::filesystem::directory_iterator(path)) {
+		if (entry.path().extension() == ".json")
+			launcherCatalog.push_back(entry.path().stem().string());
+	}
+	return launcherCatalog;
+}
+Launcher Application::loadLauncherFromJson(const std::string& fileName)
+{
+	std::ifstream file("data/launchers/" + fileName + ".json");
+	if (!file.is_open()) return Launcher({0.0, 0.0, 0.0}, 0.0, 45.0, 900.0);
+	json j = json::parse(file);
+
+	glm::dvec3 position = {
+		j["position"]["x"].get<double>(),
+		j["position"]["y"].get<double>(),
+		j["position"]["z"].get<double>()
+	};
+	double azimuth   = j["azimuth_deg"].get<double>();
+	double elevation = j["elevation_deg"].get<double>();
+	double latitude  = j["latitude_deg"].get<double>();
+
+	m_compatibleProjectiles.clear();
+	m_selectedProjectile = 0;
+	for (const auto& cp : j["compatible_projectiles"]) {
+		std::string name = cp["projectile"].get<std::string>();
+		if (name.size() > 5 && name.substr(name.size() - 5) == ".json")
+			name = name.substr(0, name.size() - 5);
+		m_compatibleProjectiles.push_back({ name, cp["muzzle_velocity_ms"].get<double>() });
+	}
+
+	double speed = m_compatibleProjectiles.empty() ? 900.0 : m_compatibleProjectiles[0].muzzleVelocity;
+	Launcher launcher(position, azimuth, elevation, speed);
+	launcher.setLatitude(latitude);
+	return launcher;
+}
+
+Projectile Application::loadProjectileFromJson(const std::string& fileName)
+{
+	std::ifstream file("data/projectiles/" + fileName + ".json");
+	if (!file.is_open()) return Projectile(48, 0.155, 0.3, 0.322580645, 1.2);
+	json j = json::parse(file);
+
+	Projectile p(
+		j["mass_kg"].get<double>(),
+		j["diameter_m"].get<double>(),
+		j["drag_coefficient_fallback"].get<double>(),
+		j["twist_rate_rev_per_m"].get<double>(),
+		j["stability_factor"].get<double>()
+	);
+
+	DragTable table;
+	for (const auto& entry : j["drag_table"])
+		table.push_back({ entry["velocity_ms"].get<double>(), entry["cd"].get<double>() });
+	p.setDragTable(std::move(table));
+	return p;
+}
+
 DragTable Application::loadDragTable()
 {
 	std::vector<dragCdTableEntry> newTable;
@@ -307,5 +412,5 @@ DragTable Application::loadDragTable()
 
 
 
-	return std::make_shared<std::vector<dragCdTableEntry>>(newTable);
+	return newTable;
 }

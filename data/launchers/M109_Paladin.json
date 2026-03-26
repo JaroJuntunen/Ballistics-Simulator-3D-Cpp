@@ -1,0 +1,11 @@
+{
+    "name": "M109 Paladin",
+    "position": { "x": 0.0, "y": 0.0, "z": 0.0 },
+    "azimuth_deg": 0.0,
+    "elevation_deg": 30.0,
+    "latitude_deg": 60.0,
+    "compatible_projectiles": [
+        { "projectile": "155mm_HE.json",   "muzzle_velocity_ms": 900.0 },
+        { "projectile": "155mm_APHE.json", "muzzle_velocity_ms": 850.0 }
+    ]
+}

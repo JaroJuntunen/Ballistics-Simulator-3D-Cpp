@@ -1,15 +1,14 @@
 #pragma once
 
-#include <memory>
 #include <vector>
 #include <algorithm>
 #include <iterator>
 
 struct dragCdTableEntry {
-	double	velocity; // in m/s
+	double	velocity;        // in m/s
 	double	dragCoefficient;
 };
-typedef std::shared_ptr<std::vector<dragCdTableEntry>> DragTable;
+typedef std::vector<dragCdTableEntry> DragTable;
 
 class Projectile {
 public:
@@ -32,18 +31,15 @@ public:
 	void	setDragCoefficient(double cd)				{ m_dragCoefficient = cd; }
 	void	setTwistRate(double twistRate)				{ m_twistRate = twistRate; }
 	void	setStabilityFactor(double stabilityFactor)	{ m_stabilityFactor = stabilityFactor; }
-	void	setIsImpacted(bool Impacted)					{ m_isImpacted = Impacted; }
-
-	//setters
-	void	setDragTable(DragTable dragtable) { m_dragtable = dragtable; }
+	void	setIsImpacted(bool impacted)				{ m_isImpacted = impacted; }
+	void	setDragTable(DragTable table)				{ m_dragtable = std::move(table); }
 
 private:
-
-	DragTable	m_dragtable = nullptr; // pointer to drag coefficient table
-	double	m_mass            = 0.0; // in kg
-	double	m_diameter        = 0.0;
-	double	m_dragCoefficient = 0.0;
-	double	m_twistRate       = 3.937007874; //revolutions per meter
-	double	m_stabilityFactor = 1.7;
-	bool	m_isImpacted        = false;
+	DragTable	m_dragtable;
+	double		m_mass            = 0.0; // in kg
+	double		m_diameter        = 0.0;
+	double		m_dragCoefficient = 0.0;
+	double		m_twistRate       = 3.937007874; // revolutions per meter
+	double		m_stabilityFactor = 1.7;
+	bool		m_isImpacted      = false;
 };

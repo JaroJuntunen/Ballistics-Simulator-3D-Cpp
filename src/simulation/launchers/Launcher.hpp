@@ -20,6 +20,7 @@ public:
 	double		getLatitudeInRad() const { return m_latitude * Physics::deg2rad; }
 
 	// Setters
+	void		setPosition(const glm::dvec3& position) { m_position = position; }
 	void		setAzimuth(double azimuth)    { m_azimuth = azimuth; }
 	void		setElevation(double elevation) { m_elevation = elevation; }
 	void		setSpeed(double speed)         { m_speed = speed; }

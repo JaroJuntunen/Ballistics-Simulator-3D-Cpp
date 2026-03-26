@@ -1,0 +1,18 @@
+{
+    "name": "81mm Illumination M853",
+    "mass_kg": 3.9,
+    "diameter_m": 0.081,
+    "drag_coefficient_fallback": 0.35,
+    "twist_rate_rev_per_m": 0.05,
+    "stability_factor": 1.0,
+    "drag_table": [
+        { "velocity_ms": 0.0,   "cd": 0.26 },
+        { "velocity_ms": 100.0, "cd": 0.27 },
+        { "velocity_ms": 200.0, "cd": 0.30 },
+        { "velocity_ms": 300.0, "cd": 0.35 },
+        { "velocity_ms": 350.0, "cd": 0.44 },
+        { "velocity_ms": 400.0, "cd": 0.46 },
+        { "velocity_ms": 450.0, "cd": 0.42 },
+        { "velocity_ms": 500.0, "cd": 0.38 }
+    ]
+}

@@ -2,17 +2,17 @@
 
 double Projectile::getDragCoefficientAtVelocity(double velocity) const
 {
-	if (m_dragtable == nullptr) {
+	if (m_dragtable.empty()) {
 		return m_dragCoefficient; // return base drag coefficient if no table is available
 	}
 	double dragCoefficient = m_dragCoefficient; // default to the base drag coefficient
-	auto i = std::lower_bound(m_dragtable->begin(), m_dragtable->end(), velocity,
+	auto i = std::lower_bound(m_dragtable.begin(), m_dragtable.end(), velocity,
 		[](const dragCdTableEntry& entry, double velocity) { return entry.velocity < velocity; });
-	if (i == m_dragtable->end()) {
+	if (i == m_dragtable.end()) {
 		i = std::prev(i);
 		dragCoefficient = i->dragCoefficient;
 	}
-	else if (i == m_dragtable->begin()) {
+	else if (i == m_dragtable.begin()) {
 		dragCoefficient = i->dragCoefficient;
 	}
 	else {

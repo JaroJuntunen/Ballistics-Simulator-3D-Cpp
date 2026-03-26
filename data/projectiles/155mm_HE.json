@@ -1,0 +1,23 @@
+{
+    "name": "155mm HE",
+    "mass_kg": 48.0,
+    "diameter_m": 0.155,
+    "drag_coefficient_fallback": 0.3,
+    "twist_rate_rev_per_m": 0.322580645,
+    "stability_factor": 1.2,
+    "drag_table": [
+        { "velocity_ms": 0.0,    "cd": 0.17 },
+        { "velocity_ms": 100.0,  "cd": 0.17 },
+        { "velocity_ms": 200.0,  "cd": 0.18 },
+        { "velocity_ms": 300.0,  "cd": 0.23 },
+        { "velocity_ms": 350.0,  "cd": 0.36 },
+        { "velocity_ms": 400.0,  "cd": 0.47 },
+        { "velocity_ms": 450.0,  "cd": 0.43 },
+        { "velocity_ms": 500.0,  "cd": 0.38 },
+        { "velocity_ms": 600.0,  "cd": 0.33 },
+        { "velocity_ms": 700.0,  "cd": 0.29 },
+        { "velocity_ms": 800.0,  "cd": 0.26 },
+        { "velocity_ms": 900.0,  "cd": 0.24 },
+        { "velocity_ms": 1000.0, "cd": 0.22 }
+    ]
+}

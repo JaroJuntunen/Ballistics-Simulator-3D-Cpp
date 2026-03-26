@@ -27,8 +27,9 @@ public:
 	void	updateDearGUI();
 	
 	DragTable loadDragTable(); // Curently hardcoded table.
-	void iterateProjectilesTrajectories(double dt);
-	
+	void	iterateProjectilesTrajectories(double dt);
+	void	importTrajectoryTableToCSV(const Trajectory& t);
+
 	GLContext			m_context;
 	Camera				m_camera;
 	Renderer			m_renderer;
@@ -36,7 +37,8 @@ public:
 	ProceduralTerrain	m_terrain;
 
 	
-	bool						m_instantFire = true;
+	bool						m_instantFire  = true;
+	int							m_csvSeparator = 1;    // 0=comma, 1=semicolon, 2=tab
 	Launcher					m_launcher	= Launcher({0.0,0.0,0.0}, 0.0, 45.0, 100.0);
 	Projectile					m_projectile = Projectile(45, 0.155, 0.3, 3.937007874, 1.7);
 	std::vector<Projectile>		m_listOfProjectiles;

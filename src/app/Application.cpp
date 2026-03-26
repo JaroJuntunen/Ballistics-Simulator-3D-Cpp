@@ -5,6 +5,8 @@
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_opengl3.h>
 #include <iostream>
+#include <fstream>
+#include <filesystem>
 
 bool Application::init() {
 	if (!m_context.init("Ballistics Simulator 3D", 1600, 900))
@@ -59,6 +61,42 @@ void Application::iterateProjectilesTrajectories(double dt)
 			m_renderer.updateTrajectory(i, traj);
 		}
 	}
+}
+
+void Application::importTrajectoryTableToCSV(const Trajectory& t)
+{
+	std::filesystem::create_directories("Exports");
+	std::string path = "Exports/trajectoryExport.csv";
+	for (int i = 1; std::filesystem::exists(path); ++i)
+		path = "Exports/trajectoryExport_" + std::to_string(i) + ".csv";
+	std::ofstream file(path);
+	if (!file.is_open()) return;
+	const char sep = (m_csvSeparator == 1) ? ';' : (m_csvSeparator == 2) ? '\t' : ',';
+	file << "Range (m)" << sep << "Height(m)" << sep << "Drift(m)" << sep << "Speed(m/s)" << sep << "TOF (s)\n";
+
+	double azRad = glm::radians(m_launcher.getAzimuth());
+	glm::dvec2 right = { std::sin(azRad), -std::cos(azRad) };
+	const double	sampleInterval	= 500.0;
+	const	glm::dvec3 origin		= t.front().position;
+	const	double physDt			= 0.01;
+	double	nextSample				= 0.0;
+	int		index					= 0;
+	for (const auto& state : t) {
+		glm::dvec2 horiz = {
+			state.position.x - origin.x,
+			state.position.y - origin.y };
+		double range = glm::length(horiz);
+		if (range >= nextSample) {
+			double height = state.position.z - origin.z;
+			double drift  = glm::dot(horiz, right);
+			double speed  = glm::length(state.velocity);
+			double tof    = index * physDt;
+			file << range << sep << height << sep << drift << sep << speed << sep << tof << "\n";
+			nextSample += sampleInterval;
+		}
+		++index;
+	}
+	file.close();
 }
 
 void Application::handleInput() {
@@ -179,14 +217,70 @@ void Application::updateDearGUI()
 		m_wind.setWindGustSeverity((double)gustSeverity);
 		m_wind.setGustFrequency((double)gustFrequency);
 	}
-	if (m_listOfTrajectories.size() > 0) {
-
-		Trajectory traj = m_listOfTrajectories.back();
+	if (!m_listOfTrajectories.empty()) {
+		const Trajectory& traj = m_listOfTrajectories.back();
 		if (!traj.empty()) {
 			ImGui::Separator();
 			ImGui::Text("Trajectory points : %d", (int)traj.size());
 			double dist = glm::distance(traj.back().position, traj.front().position);
 			ImGui::Text("Impact distance   : %.1f m", dist);
+		}
+
+		if (ImGui::CollapsingHeader("Ballistic table")) {
+			const Trajectory& t       = m_listOfTrajectories.back();
+			const double sampleInterval = 500.0;
+			const double physDt         = 0.01;
+
+			double azRad = glm::radians(m_launcher.getAzimuth());
+			glm::dvec2 right = { std::sin(azRad), -std::cos(azRad) };
+
+			if (ImGui::BeginTable("balltable", 5,
+				ImGuiTableFlags_Borders     |
+				ImGuiTableFlags_RowBg       |
+				ImGuiTableFlags_ScrollY,
+				ImVec2(0.0f, 300.0f)))
+			{
+				ImGui::TableSetupScrollFreeze(0, 1);
+				ImGui::TableSetupColumn("Range (m)");
+				ImGui::TableSetupColumn("Height (m)");
+				ImGui::TableSetupColumn("Drift (m)");
+				ImGui::TableSetupColumn("Speed (m/s)");
+				ImGui::TableSetupColumn("TOF (s)");
+				ImGui::TableHeadersRow();
+
+				if (!t.empty()) {
+					const glm::dvec3 origin = t.front().position;
+					double nextSample = 0.0;
+					int    index      = 0;
+					for (const auto& state : t) {
+						glm::dvec2 horiz = {
+							state.position.x - origin.x,
+							state.position.y - origin.y };
+						double range = glm::length(horiz);
+						if (range >= nextSample) {
+							double height = state.position.z - origin.z;
+							double drift  = glm::dot(horiz, right);
+							double speed  = glm::length(state.velocity);
+							double tof    = index * physDt;
+							ImGui::TableNextRow();
+							ImGui::TableSetColumnIndex(0); ImGui::Text("%.0f",  range);
+							ImGui::TableSetColumnIndex(1); ImGui::Text("%.1f",  height);
+							ImGui::TableSetColumnIndex(2); ImGui::Text("%.2f",  drift);
+							ImGui::TableSetColumnIndex(3); ImGui::Text("%.1f",  speed);
+							ImGui::TableSetColumnIndex(4); ImGui::Text("%.2f",  tof);
+							nextSample += sampleInterval;
+						}
+						++index;
+					}
+				}
+				ImGui::EndTable();
+			}
+			static const char* separators[] = { "Comma (,)", "Semicolon (;)", "Tab (\\t)" };
+			ImGui::SetNextItemWidth(130.0f);
+			ImGui::Combo("##sep", &m_csvSeparator, separators, 3);
+			ImGui::SameLine();
+			if (ImGui::Button("Export CSV"))
+				importTrajectoryTableToCSV(t);
 		}
 	}
 

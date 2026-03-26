@@ -130,7 +130,8 @@ All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion 
 - Dear ImGui panels for all parameters — all values adjustable at runtime
 - Trajectory trail fade: older segments fade in alpha
 - Launcher meshes rendered in the scene at their placed positions
-- Ballistic table output: range, drop, drift, and velocity at configurable distance intervals
+- Ballistic table output: range, height, drift, speed, and time of flight at 500m intervals; scrollable ImGui table
+- CSV export with configurable separator (comma, semicolon, tab); auto-numbered files saved to Exports/
 - CSV export of trajectory data per round
 
 ---
@@ -244,7 +245,7 @@ Ballistics3D/
 - [x] Spin drift
 - [x] Dear ImGui panels for all parameters
 - [x] Multiple simultaneous trajectories (instant and real-time stepping modes)
-- [ ] Ballistic table output
+- [x] Ballistic table output (range, height, drift, speed, TOF sampled at 500m intervals)
 
 **Phase 3 — Catalog, scenario system, and real terrain**
 - [ ] JSON projectile and launcher catalogs
@@ -252,7 +253,7 @@ Ballistics3D/
 - [ ] Scenario container with save/load
 - [ ] SRTM HGT terrain loader: parse tile, extract subregion around scenario, auto-coarsen for large ranges
 - [ ] Terrain backend selection: real SRTM or procedural Perlin fallback
-- [ ] CSV export of trajectory data
+- [x] CSV export of trajectory data (configurable separator, auto-numbered files in Exports/)
 
 **Phase 4 — Fire solution solver and time-on-target**
 - [ ] Ray-terrain intersection for target placement

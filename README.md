@@ -67,7 +67,7 @@ windVelocity(t) = baseWind + perlinGust(t)
 
 **Numerical integration**
 
-All forces are computed in a pure function `computeDerivatives(state, env, params, t)`. The integrator applies 4th-order Runge-Kutta (RK4) at each timestep. Euler integration is not used — RK4 is required for the accuracy the fire solution solver depends on.
+All forces are computed in a pure function `BallisticsModel::derivative()`. The integrator applies 4th-order Runge-Kutta (RK4) at each timestep. Euler integration is not used — RK4 is required for the accuracy the fire solution solver depends on.
 
 All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion to single-precision `vec3` happens once per frame when populating the GPU buffer.
 
@@ -76,39 +76,19 @@ All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion 
 ## Features
 
 ### Simulation
-- Full 3DOF point-mass ballistics with all real-world effects
-- 6DOF rigid-body simulation with mesh-based aerodynamics (Phase 5)
-- Multiple simultaneous trajectories with persistent path trails
-- Per-round toggle between 3DOF and 6DOF modes for comparison
+- Full 3DOF point-mass ballistics: gravity, drag, Coriolis, spin drift, ISA air density
+- Multiple simultaneous trajectories — instant (full RK4 in one frame) or real-time stepping modes
+- Per-trajectory color cycling; persistent path trails until cleared
 - Projectile deactivation on terrain contact
 
-### Catalog system
+### Catalog and scenario system
 - JSON-based projectile and launcher catalogs (`data/projectiles/`, `data/launchers/`)
 - Launchers: M109 Paladin (155mm), M252 81mm Mortar
 - Projectiles: 155mm HE, 155mm APHE, 81mm HE M821, 81mm Smoke M375, 81mm Illumination M853
 - Compatible projectile list per launcher with per-projectile muzzle velocity
-- Auto-selects first launcher and projectile on startup
-- Launcher and projectile selection from ImGui dropdowns; parameters shown at runtime
-- Launcher placement in 3D scene: press `M` to move the launcher to the cursor position on the terrain
-
-### Fire solution solver
-- Click a target point on the terrain to enter fire solution mode
-- Solver computes elevation, azimuth, and muzzle velocity for each placed launcher
-- Two-stage approach: coarse grid sweep followed by Newton-Raphson refinement
-- Displays time of flight, impact velocity, and solution error per launcher
-- Fires the solved trajectory for visual verification
-
-### Time-on-target (TOT)
-- Given fire solutions for multiple launchers, compute staggered launch times
-- All rounds arrive at the target simultaneously
-- Execute TOT sequence: each launcher fires at its computed offset time
-- Visual convergence of all trajectories on the target point
-
-### Area of effect (AoE)
-- Define a target area by center point and radius, or by drawn polygon
-- Models blast and fragmentation radius per projectile type
-- Greedy coverage optimizer: selects the most efficient launcher and projectile combination to cover the area
-- Coverage heatmap overlay on terrain
+- Launcher and projectile selection from ImGui dropdowns; parameters shown and editable at runtime
+- Launcher placement in 3D scene: press `M` to move launcher to cursor position via ray-terrain intersection
+- Scenario save/load to JSON (`data/scenarios/`) — persists terrain tile, launcher position/angles, projectile, and wind
 
 ### Terrain
 - **Real-world terrain** loaded from SRTM3 HGT files (NASA Shuttle Radar Topography Mission, ~90m resolution)
@@ -120,16 +100,13 @@ All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion 
 - **Procedural fallback** (Perlin noise) used when no HGT file is loaded; selectable from the same dropdown
 - HGT files are discovered automatically from `data/terrain/` (recursive scan, subdirectories supported)
 - Tile info shown in UI: origin lat/lon, width and height in km
-- Coriolis latitude auto-derived from launcher's world-space position within the loaded tile — no manual input needed
+- Coriolis latitude auto-derived from launcher's world-space position within the loaded tile
 
 ### Rendering and UI
 - Real-time 3D OpenGL rendering with orbit, pan, and zoom camera
 - Dear ImGui panels for all parameters — all values adjustable at runtime
-- Trajectory trail fade: older segments fade in alpha
-- Launcher meshes rendered in the scene at their placed positions
 - Ballistic table output: range, height, drift, speed, and time of flight at 500m intervals; scrollable ImGui table
-- CSV export with configurable separator (comma, semicolon, tab); auto-numbered files saved to Exports/
-- CSV export of trajectory data per round
+- CSV export with configurable separator (comma, semicolon, tab); auto-numbered files saved to `Exports/`
 
 ---
 
@@ -138,14 +115,10 @@ All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion 
 | Input | Action |
 |---|---|
 | `Space` | Fire projectile from selected launcher |
-| `Shift+Space` | Fire without drag (vacuum trajectory, for comparison) |
 | `Left mouse drag` | Orbit camera |
 | `Right mouse drag` | Pan camera |
 | `Scroll wheel` | Zoom |
 | `M` | Move launcher to cursor position on terrain |
-| `Left click` (fire solution mode) | Place target marker on terrain |
-| `C` | Clear oldest trajectory |
-| `R` | Reset all trajectories |
 
 ---
 
@@ -158,7 +131,7 @@ Ballistics3D/
 │   ├── projectiles/         # JSON projectile definitions
 │   ├── launchers/           # JSON launcher definitions
 │   ├── scenarios/           # Saved scenario files
-│   ├── meshes/              # 3D projectile models (Phase 5)
+│   ├── terrain/             # SRTM HGT elevation tiles (user-provided)
 │   └── shaders/             # GLSL vertex and fragment shaders
 └── src/
     ├── main.cpp
@@ -177,52 +150,24 @@ Ballistics3D/
     │   ├── launchers/
     │   │   └── Launcher.hpp/.cpp         # Position, angles, muzzle speed — fire() -> initial state
     │   ├── projectiles/
-    │   │   └── Projectile.hpp/.cpp       # Mass, diameter, velocity-indexed Cd table; DragTable typedef; loaded from JSON
-    │   ├── environment/
-    │   │   ├── Terrain.hpp               # Abstract interface: heightAt(), width(), height()
-    │   │   ├── ProceduralTerrain.hpp/.cpp # Perlin noise terrain backend (square, configurable extent)
-    │   │   ├── SRTMTerrain.hpp/.cpp      # SRTM HGT loader: binary parse, bilinear interp, lat/lon extents
-    │   │   └── wind.hpp/.cpp             # 3D wind with Perlin noise gusts
-    │   └── solvers/                      # Phase 4+
-    │       ├── FireSolutionSolver.hpp/.cpp
-    │       ├── TOTSolver.hpp/.cpp
-    │       └── AoECalculator.hpp/.cpp
+    │   │   └── Projectile.hpp/.cpp       # Mass, diameter, velocity-indexed Cd table; DragTable typedef
+    │   └── environment/
+    │       ├── Terrain.hpp               # Abstract interface: heightAt(), width(), height()
+    │       ├── ProceduralTerrain.hpp/.cpp # Perlin noise terrain backend
+    │       ├── SRTMTerrain.hpp/.cpp      # SRTM HGT loader: binary parse, bilinear interp, lat/lon extents
+    │       └── wind.hpp/.cpp             # 3D wind with Perlin noise gusts
     ├── renderer/
     │   ├── core/
     │   │   ├── GLContext.hpp/.cpp        # SDL3 + GLAD init, OpenGL context, swap
-    │   │   ├── ShaderProgram.hpp/.cpp
-    │   │   ├── VertexBuffer.hpp/.cpp     # VAO/VBO RAII wrappers
+    │   │   ├── ShaderProgram.hpp/.cpp    # GLSL load, compile, uniform setters
     │   │   └── Camera.hpp/.cpp           # Orbit/pan/zoom, view + projection matrices
     │   ├── passes/
-    │   │   ├── TerrainPass.hpp/.cpp
-    │   │   ├── TrajectoryPass.hpp/.cpp   # Multiple trajectory buffers, per-trajectory color cycling
-    │   │   ├── LauncherPass.hpp/.cpp
-    │   │   └── MeshPass.hpp/.cpp         # Assimp-loaded projectile meshes (Phase 5)
-    │   ├── Renderer.hpp/.cpp             # Owns all passes, drives frame
-    │   └── RenderData.hpp                # POD structs: double->float conversion point
-    ├── ui/
-    │   ├── UIManager.hpp/.cpp
-    │   └── panels/
-    │       ├── EnvironmentPanel.hpp/.cpp
-    │       ├── ProjectilePanel.hpp/.cpp
-    │       ├── LauncherPanel.hpp/.cpp
-    │       ├── ScenarioPanel.hpp/.cpp
-    │       ├── FireSolutionPanel.hpp/.cpp
-    │       ├── TOTPanel.hpp/.cpp
-    │       └── AoEPanel.hpp/.cpp
-    ├── input/
-    │   ├── InputHandler.hpp/.cpp
-    │   └── InputState.hpp
-    └── util/
-        ├── math/
-        │   ├── Angles.hpp               # deg/rad, azimuth/elevation helpers
-        │   ├── CoordTransform.hpp       # World<->screen, ray-terrain intersection
-        │   └── Interpolation.hpp        # Linear interpolation for Cd tables
-        ├── io/
-        │   ├── JsonLoader.hpp/.cpp
-        │   └── CsvExporter.hpp/.cpp
-        └── debug/
-            └── Logger.hpp
+    │   │   ├── TerrainPass.hpp/.cpp      # Terrain mesh upload and wireframe render
+    │   │   └── TrajectoryPass.hpp/.cpp   # Multiple trajectory buffers, per-trajectory color cycling
+    │   └── Renderer.hpp/.cpp             # Owns all passes, drives frame
+    └── input/
+        ├── InputHandler.hpp/.cpp
+        └── InputState.hpp
 ```
 
 ---
@@ -257,7 +202,7 @@ Ballistics3D/
 - [x] CSV export of trajectory data (configurable separator, auto-numbered files in Exports/)
 
 **Phase 4 — Fire solution solver and time-on-target**
-- [ ] Ray-terrain intersection for target placement
+- [ ] Target placement on terrain for fire solution mode (click to place target marker)
 - [ ] FireSolutionSolver: coarse sweep + Newton-Raphson refinement
 - [ ] Fire solution results panel per launcher
 - [ ] TOTSolver: compute staggered launch times
@@ -341,13 +286,13 @@ Select the tile at runtime from the **Terrain** panel in the ImGui window. If no
 ## Architecture notes
 
 **Simulation never touches the renderer.**
-Nothing under `src/simulation/` includes anything from `src/renderer/` or `src/ui/`. The application layer owns both and performs the translation. This is what makes the fire solution solver work: it calls the integrator thousands of times per solution search without any rendering side effects.
+Nothing under `src/simulation/` includes anything from `src/renderer/`. The application layer owns both and performs the translation. This is what makes the fire solution solver work: it calls the integrator thousands of times per solution search without any rendering side effects.
 
 **The integrator is a pure function.**
-`integrateRK4(state, env, params, t, dt) -> RigidBodyState` — no member state, no mutation. The solver depends on this.
+`Integrator::step()` and `Integrator::simulateSteps()` — no member state, no mutation. The solver depends on this.
 
 **Double precision for physics, float for rendering.**
-All simulation state uses `dvec3` and `dquat`. Conversion to `vec3` happens exactly once per frame in `Application::buildRenderData()`. Coriolis and spin drift effects are small enough that float accumulation errors would obscure them.
+All simulation state uses `dvec3` and `dquat`. Conversion to `vec3` happens once per frame when uploading trajectory points to the GPU. Coriolis and spin drift effects are small enough that float accumulation errors would obscure them.
 
 **6DOF state from day one.**
 `RigidBodyState` contains orientation and angular velocity from the start, even when they are unused in early phases. This avoids retrofitting the solver, catalog, and serialization systems when 6DOF is added.
@@ -368,7 +313,7 @@ The goal is to learn C++ and systems programming deeply, with a focus on applied
 
 **Claude-generated features:**
 
-The following features were written by Claude as the initial foundation. All future modifications and extensions are my own work.
+The following features were written primarily by Claude. Physics implementation, architectural decisions, and all JSON data files are my own work.
 
 - Build system and dependency setup
 - SDL3 window and OpenGL 3.3 Core context initialisation
@@ -377,6 +322,7 @@ The following features were written by Claude as the initial foundation. All fut
 - Procedural Perlin noise terrain mesh
 - SDL3 input handling
 - TrajectoryPass — GPU upload and line strip rendering of trajectory points
+- Scenario save/load — JSON serialization of full simulator state (I didn't want to spend time building just another json parser/writer functions)
 
 ---
 

@@ -112,6 +112,43 @@ void Application::importTrajectoryTableToCSV(const Trajectory& t)
 	file.close();
 }
 
+glm::dvec3 Application::rayFromMouce(float screenX, float screenY)
+{
+	int w, h;
+	SDL_GetWindowSizeInPixels(m_context.window(), &w, &h);
+
+	// Convert pixel -> NDC [-1, 1]
+	float ndcX = (2.0f * screenX / w) - 1.0f;
+	float ndcY = 1.0f - (2.0f * screenY / h);  // flip Y — screen Y grows down
+
+	// Unproject: clip space -> world space
+	glm::mat4 invVP = glm::inverse(m_renderer.proj() * m_renderer.view());
+	glm::vec4 nearPt = invVP * glm::vec4(ndcX, ndcY, -1.0f, 1.0f);
+	glm::vec4 farPt  = invVP * glm::vec4(ndcX, ndcY,  1.0f, 1.0f);
+
+	nearPt /= nearPt.w;
+	farPt  /= farPt.w;
+
+	return glm::normalize(glm::dvec3(farPt - nearPt));
+}
+
+void Application::setLauncherToMap(Launcher &l)
+{
+	glm::dvec3 rayOrigin = m_camera.position();
+	glm::dvec3 rayDir = rayFromMouce(m_input.state().moucePosX,m_input.state().moucePosY);
+
+	// March along ray in 10m steps
+	for (double t = 0; t < 200000.0; t += 10.0) {
+		glm::dvec3 pt = rayOrigin + rayDir * t;
+		if (pt.z <= m_terrain->heightAt((float)pt.x, (float)pt.y)) {
+			// Hit — place launcher here
+			pt.z = m_terrain->heightAt((float)pt.x, (float)pt.y) + 1.0;
+			m_launcher.setPosition(pt);
+			break;
+		}
+	}
+}
+
 void Application::handleInput() {
 	const InputState& in = m_input.state();
 	const ImGuiIO&    io = ImGui::GetIO();
@@ -145,6 +182,9 @@ void Application::handleInput() {
 		}
 		m_listOfTrajectories.push_back(m_trajectory);
 		m_renderer.addTrajectory(m_trajectory);
+	}
+	if (in.keyM) {
+		setLauncherToMap(m_launcher);
 	}
 
 

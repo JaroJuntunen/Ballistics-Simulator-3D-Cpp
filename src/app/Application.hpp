@@ -47,6 +47,10 @@ public:
 	void	iterateProjectilesTrajectories(double dt);
 	void	importTrajectoryTableToCSV(const Trajectory& t);
 
+
+	glm::dvec3	rayFromMouce(float screenX, float screenY);
+	void		setLauncherToMap(Launcher& l);
+
 	GLContext					m_context;
 	Camera						m_camera;
 	Renderer					m_renderer;

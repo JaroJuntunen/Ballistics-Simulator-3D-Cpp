@@ -11,6 +11,7 @@ void InputHandler::poll(SDL_Window* window) {
 	m_state.space       = false;
 	m_state.keyC        = false;
 	m_state.keyR        = false;
+	m_state.keyM		= false;
 
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
@@ -45,10 +46,14 @@ void InputHandler::poll(SDL_Window* window) {
 			m_state.shiftHeld = (mods & SDL_KMOD_SHIFT) != 0;
 
 			switch (event.key.key) {
-			case SDLK_ESCAPE: m_state.quit  = true; break;
-			case SDLK_SPACE:  m_state.space = true; break;
-			case SDLK_C:      m_state.keyC  = true; break;
-			case SDLK_R:      m_state.keyR  = true; break;
+			case SDLK_ESCAPE:	m_state.quit	= true; break;
+			case SDLK_SPACE:	m_state.space	= true; break;
+			case SDLK_C:		m_state.keyC	= true; break;
+			case SDLK_R:		m_state.keyR	= true; break;
+			case SDLK_M:
+				m_state.keyM	= true;
+				SDL_GetMouseState(&m_state.moucePosX, &m_state.moucePosY);
+				break;
 			default: break;
 			}
 			break;

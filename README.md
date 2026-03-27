@@ -89,6 +89,7 @@ All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion 
 - Compatible projectile list per launcher with per-projectile muzzle velocity
 - Auto-selects first launcher and projectile on startup
 - Launcher and projectile selection from ImGui dropdowns; parameters shown at runtime
+- Launcher placement in 3D scene: press `M` to move the launcher to the cursor position on the terrain
 
 ### Fire solution solver
 - Click a target point on the terrain to enter fire solution mode
@@ -141,6 +142,7 @@ All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion 
 | `Left mouse drag` | Orbit camera |
 | `Right mouse drag` | Pan camera |
 | `Scroll wheel` | Zoom |
+| `M` | Move launcher to cursor position on terrain |
 | `Left click` (fire solution mode) | Place target marker on terrain |
 | `C` | Clear oldest trajectory |
 | `R` | Reset all trajectories |
@@ -249,7 +251,7 @@ Ballistics3D/
 - [x] Launcher and projectile selection from JSON catalog via ImGui dropdowns
 - [x] SRTM HGT terrain loader: binary parse, big-endian swap, bilinear interpolation, correct lat/lon extents
 - [x] Terrain backend selection: switch between real SRTM tiles and procedural Perlin fallback at runtime
-- [ ] LauncherInstance placement in 3D scene
+- [x] Launcher placement in 3D scene: ray-terrain intersection from mouse cursor, `M` to place
 - [ ] Scenario container with save/load
 - [x] CSV export of trajectory data (configurable separator, auto-numbered files in Exports/)
 

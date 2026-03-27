@@ -16,6 +16,11 @@ struct InputState {
 	bool shiftHeld  = false;
 	bool keyC       = false;
 	bool keyR       = false;
+	bool keyM		= false;
 
 	bool quit = false;
+
+	float moucePosX, moucePosY;
+
+
 };

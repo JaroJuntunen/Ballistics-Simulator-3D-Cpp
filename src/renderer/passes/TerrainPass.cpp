@@ -11,8 +11,10 @@ void TerrainPass::init(const Terrain& terrain, int samples) {
 		return;
 	}
 
-	const float half  = terrain.extent() * 0.5f;
-	const float step  = terrain.extent() / static_cast<float>(samples - 1);
+	const float halfX = terrain.width()  * 0.5f;
+	const float halfY = terrain.height() * 0.5f;
+	const float stepX = terrain.width()  / static_cast<float>(samples - 1);
+	const float stepY = terrain.height() / static_cast<float>(samples - 1);
 
 	// ── Vertices ─────────────────────────────────────────────────────────────
 	// Each vertex is (x, y, z) — z comes from heightAt
@@ -21,8 +23,8 @@ void TerrainPass::init(const Terrain& terrain, int samples) {
 
 	for (int row = 0; row < samples; ++row) {
 		for (int col = 0; col < samples; ++col) {
-			float x = -half + col * step;
-			float y = -half + row * step;
+			float x = -halfX + col * stepX;
+			float y = -halfY + row * stepY;
 			float z = terrain.heightAt(x, y);
 			vertices.push_back(x);
 			vertices.push_back(y);

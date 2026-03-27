@@ -37,7 +37,7 @@ Drag acts opposite to the velocity vector relative to wind:
 vRel    = v_projectile - v_wind
 Fd_vec  = -0.5 * Cd * rho * A * |vRel| * vRel
 ```
-Cd is looked up from a velocity-indexed table and linearly interpolated between the two nearest entries. The table covers the full velocity range from subsonic through supersonic, including the transonic drag spike around 350–450 m/s where wave drag appears. Currently hardcoded per projectile type; will be loaded from JSON catalog in Phase 3.
+Cd is looked up from a velocity-indexed table and linearly interpolated between the two nearest entries. The table covers the full velocity range from subsonic through supersonic, including the transonic drag spike around 350–450 m/s where wave drag appears. Loaded from per-projectile JSON files in `data/projectiles/`.
 
 **Aerodynamic drag (6DOF, Phase 5)**
 
@@ -82,14 +82,13 @@ All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion 
 - Per-round toggle between 3DOF and 6DOF modes for comparison
 - Projectile deactivation on terrain contact
 
-### Scenario system
+### Catalog system
 - JSON-based projectile and launcher catalogs (`data/projectiles/`, `data/launchers/`)
 - Launchers: M109 Paladin (155mm), M252 81mm Mortar
 - Projectiles: 155mm HE, 155mm APHE, 81mm HE M821, 81mm Smoke M375, 81mm Illumination M853
 - Compatible projectile list per launcher with per-projectile muzzle velocity
 - Auto-selects first launcher and projectile on startup
-- Place and orient multiple launchers in the 3D world
-- Save and load scenarios to JSON
+- Launcher and projectile selection from ImGui dropdowns; parameters shown at runtime
 
 ### Fire solution solver
 - Click a target point on the terrain to enter fire solution mode
@@ -111,21 +110,16 @@ All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion 
 - Coverage heatmap overlay on terrain
 
 ### Terrain
-- **Real-world terrain** loaded from SRTM HGT files (NASA Shuttle Radar Topography Mission)
-- 90m resolution elevation data, free download, covers the entire Earth
-- Subregion extraction: only the area relevant to the scenario is rendered — no LOD complexity needed
-- Window center is computed as the midpoint of all launchers and targets; radius scales with the scenario's maximum range
-- Auto-coarsening for very long range scenarios (MLRS-scale): samples every Nth point to keep triangle count reasonable
-- Height queries for terrain contact detection always use full-resolution in-RAM data, independent of the rendered mesh
-- **Procedural fallback** (Perlin noise) for testing without a real terrain file
-- Slope-based terrain texturing
-
-| Weapon class | Max range | Rendered window | Approx triangles |
-|---|---|---|---|
-| Rifle | ~1.5 km | 5×5 km | ~6k |
-| Mortar | ~5.5 km | 12×12 km | ~35k |
-| Howitzer (155mm) | ~25 km | 40×40 km | ~394k |
-| MLRS rockets | ~70 km | 90×90 km (2× step) | ~500k |
+- **Real-world terrain** loaded from SRTM3 HGT files (NASA Shuttle Radar Topography Mission, ~90m resolution)
+- Tile parsed from binary big-endian `int16_t` samples; bilinear interpolation between the four surrounding grid points
+- Non-square tiles correctly handled: east-west extent shrinks with latitude via `cos(lat)` factor
+- Height queries for terrain contact detection use full-resolution in-RAM data
+- Renderer samples the terrain at uniform world-space intervals; spacing derived from tile extent at load time
+- Runtime terrain switching from ImGui — swap tiles without restarting; launcher height auto-adjusted to new surface
+- **Procedural fallback** (Perlin noise) used when no HGT file is loaded; selectable from the same dropdown
+- HGT files are discovered automatically from `data/terrain/` (recursive scan, subdirectories supported)
+- Tile info shown in UI: origin lat/lon, width and height in km
+- Coriolis latitude auto-derived from launcher's world-space position within the loaded tile — no manual input needed
 
 ### Rendering and UI
 - Real-time 3D OpenGL rendering with orbit, pan, and zoom camera
@@ -182,8 +176,9 @@ Ballistics3D/
     │   ├── projectiles/
     │   │   └── Projectile.hpp/.cpp       # Mass, diameter, velocity-indexed Cd table; DragTable typedef; loaded from JSON
     │   ├── environment/
-    │   │   ├── Terrain.hpp               # Abstract interface: heightAt(), extent()
-    │   │   ├── ProceduralTerrain.hpp/.cpp # Perlin noise terrain backend
+    │   │   ├── Terrain.hpp               # Abstract interface: heightAt(), width(), height()
+    │   │   ├── ProceduralTerrain.hpp/.cpp # Perlin noise terrain backend (square, configurable extent)
+    │   │   ├── SRTMTerrain.hpp/.cpp      # SRTM HGT loader: binary parse, bilinear interp, lat/lon extents
     │   │   └── wind.hpp/.cpp             # 3D wind with Perlin noise gusts
     │   └── solvers/                      # Phase 4+
     │       ├── FireSolutionSolver.hpp/.cpp
@@ -252,10 +247,10 @@ Ballistics3D/
 **Phase 3 — Catalog, scenario system, and real terrain**
 - [x] JSON projectile and launcher catalogs
 - [x] Launcher and projectile selection from JSON catalog via ImGui dropdowns
+- [x] SRTM HGT terrain loader: binary parse, big-endian swap, bilinear interpolation, correct lat/lon extents
+- [x] Terrain backend selection: switch between real SRTM tiles and procedural Perlin fallback at runtime
 - [ ] LauncherInstance placement in 3D scene
 - [ ] Scenario container with save/load
-- [ ] SRTM HGT terrain loader: parse tile, extract subregion around scenario, auto-coarsen for large ranges
-- [ ] Terrain backend selection: real SRTM or procedural Perlin fallback
 - [x] CSV export of trajectory data (configurable separator, auto-numbered files in Exports/)
 
 **Phase 4 — Fire solution solver and time-on-target**
@@ -332,9 +327,11 @@ If you change CMake options or dependencies, delete the build directory first:
 rm -rf build
 ```
 
-**Real terrain data (Phase 3+):**
+**Real terrain data:**
 
-Download a 1°×1° SRTM tile in HGT format for your area of interest from [USGS EarthExplorer](https://earthexplorer.usgs.gov) or [OpenTopography](https://opentopography.org) and place it in `data/terrain/`. The filename encodes the tile coordinates (e.g. `N47E013.hgt` for 47°N 13°E). If no HGT file is found, the simulator falls back to procedural Perlin terrain automatically.
+Download 1°×1° SRTM3 tiles in HGT format from [viewfinderpanoramas.org](http://viewfinderpanoramas.org/dem3.html) (easiest, no account required) or [USGS EarthExplorer](https://earthexplorer.usgs.gov). Place the `.hgt` files anywhere under `data/terrain/` — subdirectories are supported. The filename encodes the tile's SW corner (e.g. `N60E025.hgt` = 60–61°N, 25–26°E).
+
+Select the tile at runtime from the **Terrain** panel in the ImGui window. If no tile is loaded, the simulator uses procedural Perlin terrain automatically.
 
 ---
 

@@ -14,7 +14,8 @@ public:
 					  float amplitude = 120.0f);
 
 	float heightAt(float x, float y) const override;
-	float extent()                   const override { return m_extent; }
+	float width()                    const override { return m_extent; }
+	float height()                   const override { return m_extent; }
 
 private:
 	float m_extent;

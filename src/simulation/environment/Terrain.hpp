@@ -10,6 +10,9 @@ public:
 	// Elevation in metres at world position (x, y). Z-up coordinate system.
 	virtual float heightAt(float x, float y) const = 0;
 
-	// Extent of the terrain in world units (metres), centred on the origin.
-	virtual float extent() const = 0;
+	// East-west extent in world metres, centred on the origin.
+	virtual float width() const = 0;
+
+	// North-south extent in world metres, centred on the origin.
+	virtual float height() const = 0;
 };

@@ -8,6 +8,11 @@ void Renderer::initTerrain(const Terrain& terrain, int samples) {
 	m_terrainPass.init(terrain, samples);
 }
 
+void Renderer::reloadTerrain(const Terrain& terrain, int samples) {
+	m_terrainPass.cleanup();
+	m_terrainPass.init(terrain, samples);
+}
+
 void Renderer::initTrajectory(){
 	m_trajectoryPass.init();
 }

@@ -13,6 +13,7 @@
 class Renderer {
 public:
 	void initTerrain(const Terrain& terrain, int samples = 100);
+	void reloadTerrain(const Terrain& terrain, int samples = 100);
 	void initTrajectory();
 
 	int  addTrajectory(const std::vector<RigidBodyState>& points);

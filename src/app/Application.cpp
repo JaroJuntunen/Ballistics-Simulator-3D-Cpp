@@ -11,11 +11,14 @@
 bool Application::init() {
 	if (!m_context.init("Ballistics Simulator 3D", 1600, 900))
 		return false;
-	
+
+	m_terrain = std::make_unique<ProceduralTerrain>();
+	m_terrainCatalog = loadTerrainCatalog();
+
 	m_camera.setOrbit(45.0f, 30.0f, 1800.0f);
-	m_renderer.initTerrain(m_terrain, m_terrain.extent() / 100);
+	m_renderer.initTerrain(*m_terrain, (int)(m_terrain->width() / 100.0f));
 	m_renderer.initTrajectory();
-	double groundZ = m_terrain.heightAt(0.0f, 0.0f);
+	double groundZ = m_terrain->heightAt(0.0f, 0.0f);
 	m_launcherCatalog = loadLauncherCatalog();
 	if (!m_launcherCatalog.empty()) {
 		m_launcher = loadLauncherFromJson(m_launcherCatalog[0]);
@@ -25,7 +28,7 @@ bool Application::init() {
 			m_launcher.setSpeed(m_compatibleProjectiles[0].muzzleVelocity);
 		}
 	} else {
-		m_launcher = Launcher({0.0, 0.0, groundZ + 1.0}, 0.0, 45.0, 900.0);
+		m_launcher = Launcher({0.0, 0.0, groundZ + 1.0f}, 0.0, 45.0, 900.0);
 		m_projectile = Projectile(48, 0.155, 0.3, 0.322580645, 1.2);
 		m_projectile.setDragTable(loadDragTable());
 	}
@@ -67,7 +70,7 @@ void Application::iterateProjectilesTrajectories(double dt)
 
 		if (!proj.getIsImpacted()) {
 			traj.push_back(Integrator::step(traj.back(), proj, m_wind,m_launcher.getLatitudeInRad(), dt, BallisticsModel::derivative));
-			proj.setIsImpacted(BallisticsModel::hasImpacted(traj.back(), m_terrain));
+			proj.setIsImpacted(BallisticsModel::hasImpacted(traj.back(), *m_terrain));
 			m_renderer.updateTrajectory(i, traj);
 		}
 	}
@@ -132,7 +135,7 @@ void Application::handleInput() {
 		RigidBodyState initialState = m_launcher.fire(proj);
 		m_listOfProjectiles.push_back(proj);
 		StopFn stop = [&](const RigidBodyState& s) {
-			return BallisticsModel::hasImpacted(s, m_terrain);
+			return BallisticsModel::hasImpacted(s, *m_terrain);
 		};
 		if (m_instantFire)
 			m_trajectory = Integrator::simulateSteps(initialState, proj, m_wind, m_launcher.getLatitudeInRad(), 0.01, BallisticsModel::derivative, stop);
@@ -178,6 +181,64 @@ void Application::updateDearGUI()
 	ImGui::SetNextWindowPos({10, 24}, ImGuiCond_FirstUseEver);
 	ImGui::Begin("Simulator", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
+
+	if (ImGui::CollapsingHeader("Terrain")) {
+		// Procedural option + all .hgt files
+		const char* proceduralLabel = "Procedural (Perlin)";
+		const char* currentLabel = (m_selectedTerrain == -1)
+			? proceduralLabel
+			: std::filesystem::path(m_terrainCatalog[m_selectedTerrain]).stem().string().c_str();
+
+		if (ImGui::BeginCombo("Tile##terrain", currentLabel)) {
+			// Procedural fallback entry
+			if (ImGui::Selectable(proceduralLabel, m_selectedTerrain == -1)) {
+				m_selectedTerrain = -1;
+				switchTerrain("");
+			}
+			if (m_selectedTerrain == -1) ImGui::SetItemDefaultFocus();
+
+			// One entry per .hgt file
+			for (int i = 0; i < (int)m_terrainCatalog.size(); ++i) {
+				std::string label = std::filesystem::path(m_terrainCatalog[i]).stem().string();
+				bool selected = (m_selectedTerrain == i);
+				if (ImGui::Selectable(label.c_str(), selected)) {
+					m_selectedTerrain = i;
+					switchTerrain(m_terrainCatalog[i]);
+				}
+				if (selected) ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
+
+		if (m_selectedTerrain >= 0) {
+			auto* srtm = dynamic_cast<SRTMTerrain*>(m_terrain.get());
+			if (srtm) {
+				ImGui::Text("Origin : %.4f N  %.4f E", srtm->originLat(), srtm->originLon());
+				ImGui::Text("Width  : %.1f km", srtm->width()  / 1000.0f);
+				ImGui::Text("Height : %.1f km", srtm->height() / 1000.0f);
+			}
+		}
+	}
+
+	if (ImGui::CollapsingHeader("Wind")) {
+		glm::dvec3 base = m_wind.getBaseWindSpeed();
+		float windX = (float)base.x;
+		float windY = (float)base.y;
+		float windZ = (float)base.z;
+		float gustSeverity  = (float)m_wind.getWindGustSeverity();
+		float gustFrequency = (float)m_wind.getGustFrequency();
+		ImGui::SeparatorText("Base wind");
+		ImGui::DragFloat("Wind X (m/s)", &windX, 0.1f, -100.0f, 100.0f);
+		ImGui::DragFloat("Wind Y (m/s)", &windY, 0.1f, -100.0f, 100.0f);
+		ImGui::DragFloat("Wind Z (m/s)", &windZ, 0.1f,  -50.0f,  50.0f);
+		ImGui::SeparatorText("Gusts");
+		ImGui::DragFloat("Gust severity",  &gustSeverity,  0.1f,  0.0f, 50.0f);
+		ImGui::DragFloat("Gust frequency", &gustFrequency, 0.01f, 0.0f,  2.0f);
+		m_wind.setBaseWindSpeed({(double)windX, (double)windY, (double)windZ});
+		m_wind.setWindGustSeverity((double)gustSeverity);
+		m_wind.setGustFrequency((double)gustFrequency);
+	}
+	
 	if (ImGui::CollapsingHeader("Launcher")) {
 		if (!m_launcherCatalog.empty()) {
 			const std::string& current = m_launcherCatalog[m_selectedLauncher];
@@ -188,7 +249,7 @@ void Application::updateDearGUI()
 						m_selectedLauncher = i;
 						m_launcher = loadLauncherFromJson(m_launcherCatalog[i]);
 						glm::dvec3 pos = m_launcher.getPosition();
-						pos.z = m_terrain.heightAt(pos.x, pos.y) + 1.0;
+						pos.z = m_terrain->heightAt(pos.x, pos.y) + 1.0;
 						m_launcher.setPosition(pos);
 						if (!m_compatibleProjectiles.empty()) {
 							m_projectile = loadProjectileFromJson(m_compatibleProjectiles[0].filename);
@@ -245,24 +306,6 @@ void Application::updateDearGUI()
 		m_projectile.setStabilityFactor((double)sf);
 	}
 
-	if (ImGui::CollapsingHeader("Wind")) {
-		glm::dvec3 base = m_wind.getBaseWindSpeed();
-		float windX = (float)base.x;
-		float windY = (float)base.y;
-		float windZ = (float)base.z;
-		float gustSeverity  = (float)m_wind.getWindGustSeverity();
-		float gustFrequency = (float)m_wind.getGustFrequency();
-		ImGui::SeparatorText("Base wind");
-		ImGui::DragFloat("Wind X (m/s)", &windX, 0.1f, -100.0f, 100.0f);
-		ImGui::DragFloat("Wind Y (m/s)", &windY, 0.1f, -100.0f, 100.0f);
-		ImGui::DragFloat("Wind Z (m/s)", &windZ, 0.1f,  -50.0f,  50.0f);
-		ImGui::SeparatorText("Gusts");
-		ImGui::DragFloat("Gust severity",  &gustSeverity,  0.1f,  0.0f, 50.0f);
-		ImGui::DragFloat("Gust frequency", &gustFrequency, 0.01f, 0.0f,  2.0f);
-		m_wind.setBaseWindSpeed({(double)windX, (double)windY, (double)windZ});
-		m_wind.setWindGustSeverity((double)gustSeverity);
-		m_wind.setGustFrequency((double)gustFrequency);
-	}
 	if (!m_listOfTrajectories.empty()) {
 		const Trajectory& traj = m_listOfTrajectories.back();
 		if (!traj.empty()) {
@@ -331,6 +374,38 @@ void Application::updateDearGUI()
 	}
 
 	ImGui::End();
+}
+
+std::vector<std::string> Application::loadTerrainCatalog()
+{
+	std::vector<std::string> catalog;
+	const std::string root = "data/terrain";
+	if (!std::filesystem::exists(root)) return catalog;
+	for (const auto& entry : std::filesystem::recursive_directory_iterator(root)) {
+		if (entry.path().extension() == ".hgt")
+			catalog.push_back(entry.path().string());
+	}
+	std::sort(catalog.begin(), catalog.end());
+	return catalog;
+}
+
+void Application::switchTerrain(const std::string& path)
+{
+	if (path.empty()) {
+		m_terrain = std::make_unique<ProceduralTerrain>();
+		m_selectedTerrain = -1;
+	} else {
+		m_terrain = std::make_unique<SRTMTerrain>(path);
+	}
+	m_renderer.reloadTerrain(*m_terrain, (int)(m_terrain->width() / 100.0f));
+	glm::dvec3 pos = m_launcher.getPosition();
+	pos.z = m_terrain->heightAt((float)pos.x, (float)pos.y) + 1.0;
+	m_launcher.setPosition(pos);
+	auto* srtm = dynamic_cast<SRTMTerrain*>(m_terrain.get());
+	if (srtm) {
+		double latFraction = pos.y / srtm->height();
+		m_launcher.setLatitude(srtm->originLat() + latFraction);
+	}
 }
 
 std::vector<std::string> Application::loadLauncherCatalog()

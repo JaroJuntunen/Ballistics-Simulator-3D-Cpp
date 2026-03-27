@@ -45,11 +45,14 @@ public:
 
 	DragTable	loadDragTable(); // Currently hardcoded, will be loaded from JSON in Phase 3.
 	void	iterateProjectilesTrajectories(double dt);
-	void	importTrajectoryTableToCSV(const Trajectory& t);
+	void	exportTrajectoryTableToCSV(const Trajectory& t);
 
 
 	glm::dvec3	rayFromMouce(float screenX, float screenY);
 	void		setLauncherToMap(Launcher& l);
+
+	void		saveScenario(const std::string& path);
+	void		loadScenario(const std::string& path);
 
 	GLContext					m_context;
 	Camera						m_camera;

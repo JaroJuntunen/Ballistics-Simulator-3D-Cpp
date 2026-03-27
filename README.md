@@ -163,9 +163,10 @@ Ballistics3D/
 └── src/
     ├── main.cpp
     ├── app/
-    │   ├── Application.hpp/.cpp          # Main loop, subsystem ownership
-    │   ├── ScenarioController.hpp/.cpp   # Mediates input/UI events -> Scenario
-    │   └── AppState.hpp                  # Mode enum: SIMULATE, FIRE_SOLUTION, AOE, TOT
+    │   ├── Application.hpp               # Class declaration, all member data
+    │   ├── Application.cpp               # Main loop, input, simulation stepping, terrain switching, ray casting
+    │   ├── Application_Parsers.cpp       # JSON loaders, scenario save/load, CSV export
+    │   └── Application_GUI.cpp           # ImGui panel rendering
     ├── simulation/
     │   ├── core/
     │   │   ├── RigidBodyState.hpp        # dvec3 pos/vel/angVel + dquat orientation
@@ -252,7 +253,7 @@ Ballistics3D/
 - [x] SRTM HGT terrain loader: binary parse, big-endian swap, bilinear interpolation, correct lat/lon extents
 - [x] Terrain backend selection: switch between real SRTM tiles and procedural Perlin fallback at runtime
 - [x] Launcher placement in 3D scene: ray-terrain intersection from mouse cursor, `M` to place
-- [ ] Scenario container with save/load
+- [x] Scenario container: save/load to JSON (terrain, launcher position/angles, projectile, wind)
 - [x] CSV export of trajectory data (configurable separator, auto-numbered files in Exports/)
 
 **Phase 4 — Fire solution solver and time-on-target**

@@ -89,6 +89,14 @@ All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion 
 - Launcher type stored per launcher; switching type reloads compatible projectile list for that launcher only
 - Add and remove launchers at runtime; new launchers auto-load the first catalog entry
 
+### Fire solution solver
+- `T` places a target at the cursor position on terrain and immediately solves for all checked launchers in parallel (multithreaded via `std::async`)
+- Per-launcher binary search solver: finds both **direct attack** (low angle, 0–45°) and **high angle** (plunging fire, 45–90°) solutions independently
+- Each bracket runs its own azimuth correction loop (3 iterations) to account for Coriolis and wind drift — direct attack and high angle converge to different azimuths
+- Actual maximum range computed by sweeping 30–60° to handle drag-shifted optimum (not assumed to be 45°)
+- Solutions validated against a 100m landing error threshold; invalid solutions shown as N/A in the UI
+- Fire solution results shown in the Launcher Manager per launcher: azimuth, elevation, TOF; **Apply** button sets the launcher angles directly
+
 ### Catalog and scenario system
 - JSON-based projectile and launcher catalogs (`data/projectiles/`, `data/launchers/`)
 - Launchers: M109 Paladin (155mm), M252 81mm Mortar
@@ -123,6 +131,7 @@ All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion 
 |---|---|
 | `Space` | Fire all checked launchers |
 | `M` | Move next checked launcher to cursor position on terrain (cycles through checked launchers) |
+| `T` | Place target at cursor position and solve fire solutions for all checked launchers |
 | `Left mouse drag` | Orbit camera |
 | `Right mouse drag` | Pan camera |
 | `Scroll wheel` | Zoom |
@@ -158,6 +167,8 @@ Ballistics3D/
     │   │   └── Launcher.hpp/.cpp         # Position, angles, muzzle speed — fire() -> initial state
     │   ├── projectiles/
     │   │   └── Projectile.hpp/.cpp       # Mass, diameter, velocity-indexed Cd table; DragTable typedef
+    │   ├── fire_control/
+    │   │   └── FireSolutionSolver.hpp/.cpp # Binary search solver: direct attack + high angle, per-bracket azimuth correction
     │   └── environment/
     │       ├── Terrain.hpp               # Abstract interface: heightAt(), width(), height()
     │       ├── ProceduralTerrain.hpp/.cpp # Perlin noise terrain backend
@@ -212,9 +223,11 @@ Ballistics3D/
 - [x] Per-trajectory ballistic table with correct drift azimuth per shot; clear individual or all trajectories
 
 **Phase 4 — Fire solution solver and time-on-target**
-- [ ] Target placement on terrain for fire solution mode (click to place target marker)
-- [ ] FireSolutionSolver: coarse sweep + Newton-Raphson refinement
-- [ ] Fire solution results panel per launcher
+- [x] Target placement on terrain via `T` key (ray-terrain intersection at cursor)
+- [x] FireSolutionSolver: binary search elevation + iterative azimuth correction per bracket
+- [x] Both direct attack and high angle solutions with independent azimuth convergence
+- [x] Parallel solving across launchers via `std::async`
+- [x] Fire solution results panel per launcher with Apply buttons; invalid solutions shown as N/A
 - [ ] TOTSolver: compute staggered launch times
 - [ ] TOT execution sequence with countdown
 

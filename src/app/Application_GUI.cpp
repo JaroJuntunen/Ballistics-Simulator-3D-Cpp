@@ -1,5 +1,6 @@
 #include "Application.hpp"
 
+#include <algorithm>
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_opengl3.h>
@@ -234,6 +235,8 @@ void Application::updateLauncherManagerGUI()
 	// Keep parallel vectors in sync
 	m_launcherProjectile.resize(m_launcher.size(), m_projectile);
 	m_launcherSelected.resize(m_launcher.size(), false);
+	m_solvedFireSolutions.resize(m_launcher.size());
+	m_solvedFireSolutions.resize(m_launcher.size());
 
 	if (ImGui::Button("+ Add Launcher")) {
 		double groundZ = m_terrain->heightAt(0.0f, 0.0f);
@@ -275,7 +278,35 @@ void Application::updateLauncherManagerGUI()
 
 		char label[32];
 		snprintf(label, sizeof(label), "Launcher %d", i + 1);
-		ImGui::TextUnformatted(label);
+
+		bool hasSolutions = i < (int)m_solvedFireSolutions.size() &&
+			std::any_of(m_solvedFireSolutions[i].begin(), m_solvedFireSolutions[i].end(),
+				[](const FireSolution& s) { return s.valid; });
+		if (hasSolutions) {
+			if (ImGui::TreeNode(label)) {
+				const SolvedFireSolutions& sols = m_solvedFireSolutions[i];
+				const char* attackLabels[] = { "Direct attack", "High angle" };
+				for (int s = 0; s < (int)sols.size(); s++) {
+					const FireSolution& sol = sols[s];
+					const char* attackLabel = s < 2 ? attackLabels[s] : "Solution";
+					ImGui::PushID(s);
+					if (sol.valid) {
+						ImGui::Text("%s: Az %.1f  El %.1f  TOF %.1fs", attackLabel, sol.azimuth_deg, sol.elevation_deg, sol.tof_s);
+						ImGui::SameLine();
+						if (ImGui::SmallButton("Apply")) {
+							m_launcher[i].setAzimuth(sol.azimuth_deg);
+							m_launcher[i].setElevation(sol.elevation_deg);
+						}
+					} else {
+						ImGui::TextDisabled("%s: N/A", attackLabel);
+					}
+					ImGui::PopID();
+				}
+				ImGui::TreePop();
+			}
+		} else {
+			ImGui::TextUnformatted(label);
+		}
 
 		ImGui::PopID();
 	}
@@ -419,6 +450,7 @@ void Application::updateLauncherManagerGUI()
 			m_launcher.erase(m_launcher.begin() + firstSelected);
 			m_launcherProjectile.erase(m_launcherProjectile.begin() + firstSelected);
 			m_launcherSelected.erase(m_launcherSelected.begin() + firstSelected);
+			m_solvedFireSolutions.erase(m_solvedFireSolutions.begin() + firstSelected);
 			m_placementQueueIdx = 0;
 		}
 		ImGui::PopStyleColor();

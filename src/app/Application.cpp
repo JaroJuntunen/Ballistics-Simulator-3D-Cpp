@@ -19,6 +19,7 @@ bool Application::init() {
 	double groundZ = m_terrain->heightAt(0.0f, 0.0f);
 	m_launcherCatalog = loadLauncherCatalog();
 	m_launcher.push_back(Launcher({0.0,0.0,0.0}, 0.0, 45.0, 100.0));
+	m_solvedFireSolutions.push_back(SolvedFireSolutions());
 	Launcher& l = m_launcher.front();
 	if (!m_launcherCatalog.empty()) {
 		l = loadLauncherFromJson(m_launcherCatalog[0]);
@@ -67,17 +68,24 @@ void Application::run() {
 
 void Application::iterateProjectilesTrajectories(double dt)
 {
+	const double physDt = 0.01;
 	for (int i = 0; i < (int)m_listOfProjectiles.size(); i++) {
 		Projectile& proj = m_listOfProjectiles.at(i);
 		Trajectory& traj = m_listOfTrajectories.at(i);
 
 		if (!proj.getIsImpacted()) {
-			traj.push_back(Integrator::step(traj.back(), proj, m_wind, dt, BallisticsModel::derivative));
-			proj.setIsImpacted(BallisticsModel::hasImpacted(traj.back(), *m_terrain));
+			double remaining = dt;
+			while (remaining > 0.0 && !proj.getIsImpacted()) {
+				double stepDt = std::min(remaining, physDt);
+				traj.push_back(Integrator::step(traj.back(), proj, m_wind, stepDt, BallisticsModel::derivative));
+				proj.setIsImpacted(BallisticsModel::hasImpacted(traj.back(), *m_terrain));
+				remaining -= stepDt;
+			}
 			m_renderer.updateTrajectory(i, traj);
 		}
 	}
 }
+
 
 glm::dvec3 Application::rayFromMouse(float screenX, float screenY)
 {
@@ -97,19 +105,25 @@ glm::dvec3 Application::rayFromMouse(float screenX, float screenY)
 	return glm::normalize(glm::dvec3(farPt - nearPt));
 }
 
-void Application::setLauncherToMap(Launcher& l)
+glm::dvec3 Application::getPositionOnMap(double mousePosX, double mousePosY)
 {
 	glm::dvec3 rayOrigin = m_camera.position();
-	glm::dvec3 rayDir    = rayFromMouse(m_input.state().mousePosX, m_input.state().mousePosY);
+	glm::dvec3 rayDir    = rayFromMouse(mousePosX, mousePosY);
 
 	for (double t = 0; t < 200000.0; t += 10.0) {
 		glm::dvec3 pt = rayOrigin + rayDir * t;
 		if (pt.z <= m_terrain->heightAt((float)pt.x, (float)pt.y)) {
 			pt.z = m_terrain->heightAt((float)pt.x, (float)pt.y) + 1.0;
-			l.setPosition(pt);
-			break;
+			return pt;
 		}
 	}
+	return glm::dvec3();
+}
+
+void Application::setLauncherToMap(Launcher& l)
+{
+	l.setPosition(getPositionOnMap(m_input.state().mousePosX,m_input.state().mousePosY));
+
 }
 
 void Application::switchTerrain(const std::string& path)
@@ -157,13 +171,13 @@ void Application::handleInput() {
 			if (!m_launcherSelected[i]) continue;
 			Projectile proj = m_launcherProjectile[i];
 			RigidBodyState initialState = m_launcher[i].fire(proj);
-			m_listOfProjectiles.push_back(proj);
 			if (m_instantFire)
 				m_trajectory = Integrator::simulateSteps(initialState, proj, m_wind, 0.01, BallisticsModel::derivative, stop);
 			else {
 				m_trajectory.clear();
 				m_trajectory.push_back(initialState);
 			}
+			m_listOfProjectiles.push_back(proj);
 			m_listOfTrajectories.push_back(m_trajectory);
 			m_renderer.addTrajectory(m_trajectory);
 			m_trajectoryAzimuths.push_back(m_launcher[i].getAzimuth());
@@ -184,6 +198,26 @@ void Application::handleInput() {
 			int idx = m_placementQueueIdx % (int)selIndices.size();
 			setLauncherToMap(m_launcher[selIndices[idx]]);
 			m_placementQueueIdx = (m_placementQueueIdx + 1) % (int)selIndices.size();
+		}
+	}
+
+	if(in.keyT) {
+		if(in.keyT) {
+			glm::dvec3 targetPos = getPositionOnMap(m_input.state().mousePosX,m_input.state().mousePosY);
+			std::vector<std::future<SolvedFireSolutions>> futures;
+			std::vector<int> indices;
+			
+			for (int i = 0; i < (int)m_launcher.size(); i++) {
+				if (!m_launcherSelected[i]) continue;
+				Projectile proj = m_launcherProjectile[i];
+				futures.push_back(std::async(std::launch::async,
+					FireSolutionSolver::solveFireSolutionForLauncher,
+					m_launcher[i], std::ref(*m_terrain), proj, m_wind, targetPos));
+				indices.push_back(i);
+			}
+			
+			for (int f = 0; f < (int)futures.size(); f++)
+				m_solvedFireSolutions[indices[f]] = futures[f].get();
 		}
 	}
 }

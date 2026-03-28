@@ -17,6 +17,7 @@ struct InputState {
 	bool keyC       = false;
 	bool keyR       = false;
 	bool keyM		= false;
+	bool keyT		= false;
 
 	bool quit = false;
 

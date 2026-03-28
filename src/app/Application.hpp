@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <future>
 
 #include "renderer/core/GLContext.hpp"
 #include "renderer/core/Camera.hpp"
@@ -14,6 +15,7 @@
 #include "simulation/launchers/Launcher.hpp"
 #include "simulation/projectiles/Projectile.hpp"
 #include "simulation/core/Integrator.hpp"
+#include "simulation/fire_control/FireSolutionSolver.hpp"
 
 #include <nlohmann/json.hpp>
 #include <memory>
@@ -50,6 +52,7 @@ public:
 
 
 	glm::dvec3	rayFromMouse(float screenX, float screenY);
+	glm::dvec3	getPositionOnMap(double mousePosX, double mousePosY);
 	void		setLauncherToMap(Launcher& l);
 
 	void		saveScenario(const std::string& path);
@@ -62,23 +65,24 @@ public:
 	std::unique_ptr<Terrain>	m_terrain;
 
 	
-	bool						m_instantFire     = true;
-	int							m_csvSeparator    = 1;    // 0=comma, 1=semicolon, 2=tab
-	std::vector<std::string>		m_terrainCatalog;         // full paths to .hgt files
-	int								m_selectedTerrain = -1;   // -1 = procedural
+	bool								m_instantFire     = true;
+	int									m_csvSeparator    = 1;    // 0=comma, 1=semicolon, 2=tab
+	std::vector<std::string>			m_terrainCatalog;         // full paths to .hgt files
+	int									m_selectedTerrain = -1;   // -1 = procedural
 	std::vector<std::string>			m_launcherCatalog;
 	std::vector<CompatibleProjectile>	m_compatibleProjectiles;
 	int									m_selectedProjectile = 0;
-	std::vector<Launcher>					m_launcher;
-	std::vector<Projectile>					m_launcherProjectile; // one projectile per launcher
-	std::vector<bool>						m_launcherSelected;
-	int										m_placementQueueIdx = 0;
-	Projectile					m_projectile = Projectile(45, 0.155, 0.3, 3.937007874, 1.7, 1.04719755);
-	std::vector<Projectile>		m_listOfProjectiles;
-	Trajectory					m_trajectory;
-	std::vector<Trajectory>		m_listOfTrajectories;
-	std::vector<double>			m_trajectoryAzimuths;
-	std::vector<std::string>	m_trajectoryLabels;
+	std::vector<Launcher>				m_launcher;
+	std::vector<Projectile>				m_launcherProjectile; // one projectile per launcher
+	std::vector<bool>					m_launcherSelected;
+	int									m_placementQueueIdx = 0;
+	Projectile							m_projectile = Projectile(45, 0.155, 0.3, 3.937007874, 1.7, 1.04719755);
+	std::vector<Projectile>				m_listOfProjectiles;
+	Trajectory							m_trajectory;
+	std::vector<Trajectory>				m_listOfTrajectories;
+	std::vector<double>					m_trajectoryAzimuths;
+	std::vector<std::string>			m_trajectoryLabels;
+	std::vector<SolvedFireSolutions>	m_solvedFireSolutions;
 	
 	Wind	m_wind;
 

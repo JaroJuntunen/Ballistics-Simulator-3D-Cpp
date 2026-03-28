@@ -52,7 +52,7 @@ void InputHandler::poll(SDL_Window* window) {
 			case SDLK_R:		m_state.keyR	= true; break;
 			case SDLK_M:
 				m_state.keyM	= true;
-				SDL_GetMouseState(&m_state.moucePosX, &m_state.moucePosY);
+				SDL_GetMouseState(&m_state.mousePosX, &m_state.mousePosY);
 				break;
 			default: break;
 			}

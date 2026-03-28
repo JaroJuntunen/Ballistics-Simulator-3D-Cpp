@@ -63,10 +63,10 @@ Launcher Application::loadLauncherFromJson(const std::string& fileName)
 	return launcher;
 }
 
-Projectile Application::loadProjectileFromJson(const std::string& fileName)
+Projectile Application::loadProjectileFromJson(const std::string& fileName, double latitudeRad)
 {
 	std::ifstream file("data/projectiles/" + fileName + ".json");
-	if (!file.is_open()) return Projectile(48, 0.155, 0.3, 0.322580645, 1.2);
+	if (!file.is_open()) return Projectile(48, 0.155, 0.3, 0.322580645, 1.2, latitudeRad);
 	json j = json::parse(file);
 
 	Projectile p(
@@ -74,13 +74,15 @@ Projectile Application::loadProjectileFromJson(const std::string& fileName)
 		j["diameter_m"].get<double>(),
 		j["drag_coefficient_fallback"].get<double>(),
 		j["twist_rate_rev_per_m"].get<double>(),
-		j["stability_factor"].get<double>()
+		j["stability_factor"].get<double>(),
+		latitudeRad
 	);
 
 	DragTable table;
 	for (const auto& entry : j["drag_table"])
 		table.push_back({ entry["velocity_ms"].get<double>(), entry["cd"].get<double>() });
 	p.setDragTable(std::move(table));
+	p.setProjectileType(fileName);
 	return p;
 }
 
@@ -116,14 +118,21 @@ void Application::saveScenario(const std::string& path)
 	else
 		j["terrain"] = "";
 
-	glm::dvec3 pos = m_launcher.getPosition();
-	j["launcher"]["catalog_entry"]      = m_launcherCatalog.empty() ? "" : m_launcherCatalog[m_selectedLauncher];
-	j["launcher"]["position"]           = { {"x", pos.x}, {"y", pos.y}, {"z", pos.z} };
-	j["launcher"]["azimuth_deg"]        = m_launcher.getAzimuth();
-	j["launcher"]["elevation_deg"]      = m_launcher.getElevation();
-	j["launcher"]["muzzle_velocity_ms"] = m_launcher.getSpeed();
-
-	j["projectile"]["catalog_entry"] = m_compatibleProjectiles.empty() ? "" : m_compatibleProjectiles[m_selectedProjectile].filename;
+	json launchers = json::array();
+	for (int i = 0; i < (int)m_launcher.size(); i++) {
+		const Launcher& l = m_launcher[i];
+		glm::dvec3 pos = l.getPosition();
+		json entry;
+		entry["launcherType"]       = l.getLauncherType();
+		entry["position"]           = { {"x", pos.x}, {"y", pos.y}, {"z", pos.z} };
+		entry["azimuth_deg"]        = l.getAzimuth();
+		entry["elevation_deg"]      = l.getElevation();
+		entry["muzzle_velocity_ms"] = l.getSpeed();
+		entry["latitude_deg"]       = l.getLatitude();
+		entry["projectileType"]     = m_launcherProjectile[i].getProjectileType();
+		launchers.push_back(entry);
+	}
+	j["launchers"] = launchers;
 
 	glm::dvec3 wind = m_wind.getBaseWindSpeed();
 	j["wind"]["base_x"]         = wind.x;
@@ -154,36 +163,49 @@ void Application::loadScenario(const std::string& path)
 		switchTerrain(terrainPath);
 	}
 
-	// Launcher
-	std::string launcherEntry = j["launcher"].value("catalog_entry", "");
-	if (!launcherEntry.empty()) {
-		auto it = std::find(m_launcherCatalog.begin(), m_launcherCatalog.end(), launcherEntry);
-		if (it != m_launcherCatalog.end()) {
-			m_selectedLauncher = (int)std::distance(m_launcherCatalog.begin(), it);
-			m_launcher = loadLauncherFromJson(launcherEntry);
-		}
-	}
-	glm::dvec3 pos = {
-		j["launcher"]["position"]["x"].get<double>(),
-		j["launcher"]["position"]["y"].get<double>(),
-		j["launcher"]["position"]["z"].get<double>()
-	};
-	pos.z = m_terrain->heightAt((float)pos.x, (float)pos.y) + 1.0;
-	m_launcher.setPosition(pos);
-	m_launcher.setAzimuth(j["launcher"].value("azimuth_deg", 45.0));
-	m_launcher.setElevation(j["launcher"].value("elevation_deg", 45.0));
-	m_launcher.setSpeed(j["launcher"].value("muzzle_velocity_ms", 900.0));
+	// Launchers + trajectory history
+	m_launcher.clear();
+	m_launcherProjectile.clear();
+	m_launcherSelected.clear();
+	m_listOfProjectiles.clear();
+	m_listOfTrajectories.clear();
+	m_trajectoryAzimuths.clear();
+	m_trajectoryLabels.clear();
+	m_renderer.clearTrajectories();
 
-	// Projectile
-	std::string projEntry = j["projectile"].value("catalog_entry", "");
-	if (!projEntry.empty()) {
-		auto it = std::find_if(m_compatibleProjectiles.begin(), m_compatibleProjectiles.end(),
-			[&](const CompatibleProjectile& cp) { return cp.filename == projEntry; });
-		if (it != m_compatibleProjectiles.end()) {
-			m_selectedProjectile = (int)std::distance(m_compatibleProjectiles.begin(), it);
-			m_projectile = loadProjectileFromJson(projEntry);
-			m_launcher.setSpeed(it->muzzleVelocity);
-		}
+	for (const auto& entry : j["launchers"]) {
+		std::string launcherType = entry.value("launcherType", "");
+		Launcher l = launcherType.empty()
+			? Launcher({0.0, 0.0, 0.0}, 0.0, 45.0, 900.0)
+			: loadLauncherFromJson(launcherType);
+
+		glm::dvec3 pos = {
+			entry["position"]["x"].get<double>(),
+			entry["position"]["y"].get<double>(),
+			entry["position"]["z"].get<double>()
+		};
+		pos.z = m_terrain->heightAt((float)pos.x, (float)pos.y) + 1.0;
+		l.setPosition(pos);
+		l.setAzimuth(entry.value("azimuth_deg", 45.0));
+		l.setElevation(entry.value("elevation_deg", 45.0));
+		l.setSpeed(entry.value("muzzle_velocity_ms", 900.0));
+		l.setLatitude(entry.value("latitude_deg", 60.0));
+		l.setLauncherType(launcherType);
+		m_launcher.push_back(l);
+
+		std::string projectileType = entry.value("projectileType", "");
+		Projectile p = projectileType.empty()
+			? m_projectile
+			: loadProjectileFromJson(projectileType);
+		m_launcherProjectile.push_back(p);
+		m_launcherSelected.push_back(false);
+	}
+
+	if (m_launcher.empty()) {
+		double groundZ = m_terrain->heightAt(0.0f, 0.0f);
+		m_launcher.push_back(Launcher({0.0, 0.0, groundZ + 1.0}, 0.0, 45.0, 900.0));
+		m_launcherProjectile.push_back(m_projectile);
+		m_launcherSelected.push_back(false);
 	}
 
 	// Wind
@@ -209,7 +231,7 @@ void Application::exportTrajectoryTableToCSV(const Trajectory& t)
 	const char sep = (m_csvSeparator == 1) ? ';' : (m_csvSeparator == 2) ? '\t' : ',';
 	file << "Range (m)" << sep << "Height(m)" << sep << "Drift(m)" << sep << "Speed(m/s)" << sep << "TOF (s)\n";
 
-	double azRad = glm::radians(m_launcher.getAzimuth());
+	double azRad = glm::radians(m_trajectoryAzimuths.empty() ? 0.0 : m_trajectoryAzimuths.back());
 	glm::dvec2 right = { std::sin(azRad), -std::cos(azRad) };
 	const double sampleInterval = 500.0;
 	const glm::dvec3 origin     = t.front().position;

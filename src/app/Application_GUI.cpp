@@ -80,138 +80,109 @@ void Application::updateDearGUI()
 		m_wind.setGustFrequency((double)gustFrequency);
 	}
 
-	// ── Launcher ──────────────────────────────────────────────────────────────
-	if (ImGui::CollapsingHeader("Launcher")) {
-		if (!m_launcherCatalog.empty()) {
-			const std::string& current = m_launcherCatalog[m_selectedLauncher];
-			if (ImGui::BeginCombo("Type##launcher", current.c_str())) {
-				for (int i = 0; i < (int)m_launcherCatalog.size(); ++i) {
-					bool selected = (m_selectedLauncher == i);
-					if (ImGui::Selectable(m_launcherCatalog[i].c_str(), selected)) {
-						m_selectedLauncher = i;
-						m_launcher = loadLauncherFromJson(m_launcherCatalog[i]);
-						glm::dvec3 pos = m_launcher.getPosition();
-						pos.z = m_terrain->heightAt(pos.x, pos.y) + 1.0;
-						m_launcher.setPosition(pos);
-						if (!m_compatibleProjectiles.empty()) {
-							m_projectile = loadProjectileFromJson(m_compatibleProjectiles[0].filename);
-							m_launcher.setSpeed(m_compatibleProjectiles[0].muzzleVelocity);
-						}
-					}
-					if (selected) ImGui::SetItemDefaultFocus();
-				}
-				ImGui::EndCombo();
-			}
-		}
-		float azimuth   = (float)m_launcher.getAzimuth();
-		float elevation = (float)m_launcher.getElevation();
-		float speed     = (float)m_launcher.getSpeed();
-		float latitude  = (float)m_launcher.getLatitude();
-		ImGui::DragFloat("Azimuth (deg)",          &azimuth,   0.5f, -180.0f, 180.0f);
-		ImGui::DragFloat("Elevation (deg)",         &elevation, 0.5f,    0.0f,  90.0f);
-		ImGui::DragFloat("Muzzle velocity (m/s)",  &speed,     1.0f,    1.0f, 2000.0f);
-		ImGui::DragFloat("Latitude (deg)",          &latitude,  0.5f,  -90.0f,  90.0f);
-		m_launcher.setAzimuth((double)azimuth);
-		m_launcher.setElevation((double)elevation);
-		m_launcher.setSpeed((double)speed);
-		m_launcher.setLatitude((double)latitude);
-		ImGui::Checkbox("Instant trajectory", &m_instantFire);
-	}
-
-	// ── Projectile ────────────────────────────────────────────────────────────
-	if (ImGui::CollapsingHeader("Projectile")) {
-		if (!m_compatibleProjectiles.empty()) {
-			const std::string& current = m_compatibleProjectiles[m_selectedProjectile].filename;
-			if (ImGui::BeginCombo("Type##projectile", current.c_str())) {
-				for (int i = 0; i < (int)m_compatibleProjectiles.size(); ++i) {
-					bool selected = (m_selectedProjectile == i);
-					if (ImGui::Selectable(m_compatibleProjectiles[i].filename.c_str(), selected)) {
-						m_selectedProjectile = i;
-						m_projectile = loadProjectileFromJson(m_compatibleProjectiles[i].filename);
-						m_launcher.setSpeed(m_compatibleProjectiles[i].muzzleVelocity);
-					}
-					if (selected) ImGui::SetItemDefaultFocus();
-				}
-				ImGui::EndCombo();
-			}
-		}
-		float mass     = (float)m_projectile.getMass();
-		float diameter = (float)m_projectile.getDiameter();
-		float twist    = (float)m_projectile.getTwistRate();
-		float sf       = (float)m_projectile.getStabilityFactor();
-		ImGui::DragFloat("Mass (kg)",           &mass,     0.01f,  0.01f, 100.0f);
-		ImGui::DragFloat("Diameter (m)",        &diameter, 0.001f, 0.001f,  0.5f);
-		ImGui::DragFloat("Twist rate (rev/m)",  &twist,    0.01f,  0.01f,  10.0f);
-		ImGui::DragFloat("Stability factor",    &sf,       0.01f,  0.5f,    5.0f);
-		m_projectile.setMass((double)mass);
-		m_projectile.setDiameter((double)diameter);
-		m_projectile.setTwistRate((double)twist);
-		m_projectile.setStabilityFactor((double)sf);
-	}
-
 	// ── Trajectory info + ballistic table ────────────────────────────────────
 	if (!m_listOfTrajectories.empty()) {
-		const Trajectory& traj = m_listOfTrajectories.back();
-		if (!traj.empty()) {
+		const Trajectory& lastTraj = m_listOfTrajectories.back();
+		if (!lastTraj.empty()) {
 			ImGui::Separator();
-			ImGui::Text("Trajectory points : %d", (int)traj.size());
-			double dist = glm::distance(traj.back().position, traj.front().position);
+			ImGui::Text("Trajectory points : %d", (int)lastTraj.size());
+			double dist = glm::distance(lastTraj.back().position, lastTraj.front().position);
 			ImGui::Text("Impact distance   : %.1f m", dist);
 		}
 
 		if (ImGui::CollapsingHeader("Ballistic table")) {
-			const Trajectory& t         = m_listOfTrajectories.back();
+			if (ImGui::Button("Clear All")) {
+				m_listOfTrajectories.clear();
+				m_listOfProjectiles.clear();
+				m_trajectoryAzimuths.clear();
+				m_trajectoryLabels.clear();
+				m_renderer.clearTrajectories();
+			}
+
 			const double sampleInterval = 500.0;
 			const double physDt         = 0.01;
+			int removeIdx = -1;
 
-			double azRad = glm::radians(m_launcher.getAzimuth());
-			glm::dvec2 right = { std::sin(azRad), -std::cos(azRad) };
+			for (int ti = 0; ti < (int)m_listOfTrajectories.size(); ti++) {
+				const Trajectory& t = m_listOfTrajectories[ti];
+				if (t.empty()) continue;
 
-			if (ImGui::BeginTable("balltable", 5,
-				ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY,
-				ImVec2(0.0f, 300.0f)))
-			{
-				ImGui::TableSetupScrollFreeze(0, 1);
-				ImGui::TableSetupColumn("Range (m)");
-				ImGui::TableSetupColumn("Height (m)");
-				ImGui::TableSetupColumn("Drift (m)");
-				ImGui::TableSetupColumn("Speed (m/s)");
-				ImGui::TableSetupColumn("TOF (s)");
-				ImGui::TableHeadersRow();
+				std::string header = (ti < (int)m_trajectoryLabels.size())
+					? m_trajectoryLabels[ti]
+					: ("Trajectory " + std::to_string(ti + 1));
+				header += "##bt" + std::to_string(ti);
 
-				if (!t.empty()) {
-					const glm::dvec3 origin = t.front().position;
-					double nextSample = 0.0;
-					int    index      = 0;
-					for (const auto& state : t) {
-						glm::dvec2 horiz = {
-							state.position.x - origin.x,
-							state.position.y - origin.y };
-						double range = glm::length(horiz);
-						if (range >= nextSample) {
-							double height = state.position.z - origin.z;
-							double drift  = glm::dot(horiz, right);
-							double speed  = glm::length(state.velocity);
-							double tof    = index * physDt;
-							ImGui::TableNextRow();
-							ImGui::TableSetColumnIndex(0); ImGui::Text("%.0f",  range);
-							ImGui::TableSetColumnIndex(1); ImGui::Text("%.1f",  height);
-							ImGui::TableSetColumnIndex(2); ImGui::Text("%.2f",  drift);
-							ImGui::TableSetColumnIndex(3); ImGui::Text("%.1f",  speed);
-							ImGui::TableSetColumnIndex(4); ImGui::Text("%.2f",  tof);
-							nextSample += sampleInterval;
+				if (ImGui::CollapsingHeader(header.c_str())) {
+					double azDeg = (ti < (int)m_trajectoryAzimuths.size()) ? m_trajectoryAzimuths[ti] : 0.0;
+					double azRad = glm::radians(azDeg);
+					glm::dvec2 right = { std::sin(azRad), -std::cos(azRad) };
+
+					std::string tableId = "balltable" + std::to_string(ti);
+					if (ImGui::BeginTable(tableId.c_str(), 5,
+						ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY,
+						ImVec2(0.0f, 300.0f)))
+					{
+						ImGui::TableSetupScrollFreeze(0, 1);
+						ImGui::TableSetupColumn("Range (m)");
+						ImGui::TableSetupColumn("Height (m)");
+						ImGui::TableSetupColumn("Drift (m)");
+						ImGui::TableSetupColumn("Speed (m/s)");
+						ImGui::TableSetupColumn("TOF (s)");
+						ImGui::TableHeadersRow();
+
+						const glm::dvec3 origin = t.front().position;
+						double nextSample = 0.0;
+						int    index      = 0;
+						for (const auto& state : t) {
+							glm::dvec2 horiz = {
+								state.position.x - origin.x,
+								state.position.y - origin.y };
+							double range = glm::length(horiz);
+							if (range >= nextSample) {
+								double height = state.position.z - origin.z;
+								double drift  = glm::dot(horiz, right);
+								double speed  = glm::length(state.velocity);
+								double tof    = index * physDt;
+								ImGui::TableNextRow();
+								ImGui::TableSetColumnIndex(0); ImGui::Text("%.0f",  range);
+								ImGui::TableSetColumnIndex(1); ImGui::Text("%.1f",  height);
+								ImGui::TableSetColumnIndex(2); ImGui::Text("%.2f",  drift);
+								ImGui::TableSetColumnIndex(3); ImGui::Text("%.1f",  speed);
+								ImGui::TableSetColumnIndex(4); ImGui::Text("%.2f",  tof);
+								nextSample += sampleInterval;
+							}
+							++index;
 						}
-						++index;
+						ImGui::EndTable();
 					}
+					static const char* separators[] = { "Comma (,)", "Semicolon (;)", "Tab (\\t)" };
+					ImGui::SetNextItemWidth(130.0f);
+					ImGui::Combo("##sep", &m_csvSeparator, separators, 3);
+					ImGui::SameLine();
+					if (ImGui::Button("Export CSV"))
+						exportTrajectoryTableToCSV(t);
+					ImGui::PushID(ti);
+					ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
+					float clearWidth = ImGui::CalcTextSize("Clear").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+					ImGui::SetCursorPosX(ImGui::GetContentRegionMax().x - clearWidth);
+					if (ImGui::Button("Clear"))
+						removeIdx = ti;
+					ImGui::PopStyleColor();
+					ImGui::PopID();
 				}
-				ImGui::EndTable();
 			}
-			static const char* separators[] = { "Comma (,)", "Semicolon (;)", "Tab (\\t)" };
-			ImGui::SetNextItemWidth(130.0f);
-			ImGui::Combo("##sep", &m_csvSeparator, separators, 3);
-			ImGui::SameLine();
-			if (ImGui::Button("Export CSV"))
-				exportTrajectoryTableToCSV(t);
+
+			if (removeIdx >= 0) {
+				m_listOfTrajectories.erase(m_listOfTrajectories.begin() + removeIdx);
+				m_listOfProjectiles.erase(m_listOfProjectiles.begin() + removeIdx);
+				if (removeIdx < (int)m_trajectoryAzimuths.size())
+					m_trajectoryAzimuths.erase(m_trajectoryAzimuths.begin() + removeIdx);
+				if (removeIdx < (int)m_trajectoryLabels.size())
+					m_trajectoryLabels.erase(m_trajectoryLabels.begin() + removeIdx);
+				m_renderer.clearTrajectories();
+				for (const auto& traj : m_listOfTrajectories)
+					m_renderer.addTrajectory(traj);
+			}
 		}
 	}
 
@@ -246,6 +217,211 @@ void Application::updateDearGUI()
 				}
 			}
 		}
+	}
+
+	ImGui::End();
+
+	updateLauncherManagerGUI();
+}
+
+void Application::updateLauncherManagerGUI()
+{
+	ImGuiIO& io = ImGui::GetIO();
+	ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - 10.0f, 10.0f), ImGuiCond_Always, ImVec2(1.0f, 0.0f));
+	ImGui::SetNextWindowSizeConstraints(ImVec2(300.0f, 0.0f), ImVec2(400.0f, io.DisplaySize.y - 20.0f));
+	ImGui::Begin("Launcher Manager", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove);
+
+	// Keep parallel vectors in sync
+	m_launcherProjectile.resize(m_launcher.size(), m_projectile);
+	m_launcherSelected.resize(m_launcher.size(), false);
+
+	if (ImGui::Button("+ Add Launcher")) {
+		double groundZ = m_terrain->heightAt(0.0f, 0.0f);
+		if (!m_launcherCatalog.empty()) {
+			std::string entry = m_launcherCatalog[0];
+			Launcher newL = loadLauncherFromJson(entry);
+			newL.setPosition({0.0, 0.0, groundZ + 1.0});
+			m_launcher.push_back(newL);
+			Projectile newP = !m_compatibleProjectiles.empty()
+				? loadProjectileFromJson(m_compatibleProjectiles[0].filename, m_launcher.back().getLatitudeInRad())
+				: m_projectile;
+			if (!m_compatibleProjectiles.empty())
+				m_launcher.back().setSpeed(m_compatibleProjectiles[0].muzzleVelocity);
+			m_launcherProjectile.push_back(newP);
+			m_launcher.back().setLauncherType(entry);
+		} else {
+			m_launcher.push_back(Launcher({0.0, 0.0, groundZ + 1.0}, 0.0, 45.0, 900.0));
+			m_launcherProjectile.push_back(m_launcherProjectile.empty() ? m_projectile : m_launcherProjectile.front());
+		}
+		m_launcherSelected.push_back(false);
+		m_placementQueueIdx = 0;
+	}
+
+	ImGui::SameLine();
+	ImGui::Checkbox("Instant trajectory", &m_instantFire);
+
+	ImGui::Separator();
+
+	// Launcher list — checkbox selects for editing and firing
+	for (int i = 0; i < (int)m_launcher.size(); i++) {
+		ImGui::PushID(i);
+
+		bool sel = m_launcherSelected[i];
+		if (ImGui::Checkbox("##sel", &sel)) {
+			m_launcherSelected[i] = sel;
+			m_placementQueueIdx = 0;
+		}
+		ImGui::SameLine();
+
+		char label[32];
+		snprintf(label, sizeof(label), "Launcher %d", i + 1);
+		ImGui::TextUnformatted(label);
+
+		ImGui::PopID();
+	}
+
+	// Collect selected indices
+	int firstSelected = -1;
+	int selectedCount = 0;
+	for (int i = 0; i < (int)m_launcherSelected.size(); i++) {
+		if (m_launcherSelected[i]) {
+			if (firstSelected == -1) firstSelected = i;
+			selectedCount++;
+		}
+	}
+
+	if (selectedCount == 0) {
+		ImGui::End();
+		return;
+	}
+
+	ImGui::Separator();
+	if (selectedCount == 1)
+		ImGui::Text("Editing: Launcher %d", firstSelected + 1);
+	else
+		ImGui::Text("Editing: %d launchers", selectedCount);
+
+	// ── Check if all selected are the same catalog type ────────────────────
+	bool allSameType = true;
+	const std::string& commonType = m_launcher[firstSelected].getLauncherType();
+	for (int i = 0; i < (int)m_launcher.size(); i++) {
+		if (m_launcherSelected[i] && m_launcher[i].getLauncherType() != commonType) {
+			allSameType = false;
+			break;
+		}
+	}
+
+	// ── Launcher catalog dropdown ──────────────────────────────────────────
+	if (!m_launcherCatalog.empty()) {
+		const char* typeLabel = allSameType
+			? (commonType.empty() ? "(custom)" : commonType.c_str())
+			: "(mixed)";
+		if (ImGui::BeginCombo("Type##lmgr", typeLabel)) {
+			for (const auto& entry : m_launcherCatalog) {
+				bool typeSel = allSameType && commonType == entry;
+				if (ImGui::Selectable(entry.c_str(), typeSel)) {
+					for (int i = 0; i < (int)m_launcher.size(); i++) {
+						if (!m_launcherSelected[i]) continue;
+						glm::dvec3 savedPos = m_launcher[i].getPosition();
+						m_launcher[i] = loadLauncherFromJson(entry);
+						m_launcher[i].setPosition(savedPos);
+						m_launcher[i].setLauncherType(entry);
+						if (!m_compatibleProjectiles.empty()) {
+							m_launcherProjectile[i] = loadProjectileFromJson(m_compatibleProjectiles[0].filename, m_launcher[i].getLatitudeInRad());
+							m_launcher[i].setSpeed(m_compatibleProjectiles[0].muzzleVelocity);
+						}
+					}
+				}
+				if (typeSel) ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
+	}
+
+	// ── Ballistic params (apply to all selected) ───────────────────────────
+	Launcher& ref   = m_launcher[firstSelected];
+	float azimuth   = (float)ref.getAzimuth();
+	float elevation = (float)ref.getElevation();
+	float speed     = (float)ref.getSpeed();
+	float latitude  = (float)ref.getLatitude();
+
+	bool changed = false;
+	changed |= ImGui::DragFloat("Azimuth (deg)",         &azimuth,   0.5f, -180.0f, 180.0f);
+	changed |= ImGui::DragFloat("Elevation (deg)",        &elevation, 0.5f,    0.0f,  90.0f);
+	changed |= ImGui::DragFloat("Muzzle velocity (m/s)", &speed,     1.0f,    1.0f, 2000.0f);
+	changed |= ImGui::DragFloat("Latitude (deg)",         &latitude,  0.5f,  -90.0f,  90.0f);
+	if (changed) {
+		for (int i = 0; i < (int)m_launcher.size(); i++) {
+			if (!m_launcherSelected[i]) continue;
+			m_launcher[i].setAzimuth((double)azimuth);
+			m_launcher[i].setElevation((double)elevation);
+			m_launcher[i].setSpeed((double)speed);
+			m_launcher[i].setLatitude((double)latitude);
+		}
+	}
+
+	// ── Projectile ────────────────────────────────────────────────────────
+	ImGui::Separator();
+	if (!allSameType) {
+		ImGui::TextDisabled("Mixed launcher types — projectile editing unavailable");
+	} else if (!m_compatibleProjectiles.empty()) {
+		const std::string& projCurrent = m_compatibleProjectiles[m_selectedProjectile].filename;
+		if (ImGui::BeginCombo("Projectile##lmgr", projCurrent.c_str())) {
+			for (int i = 0; i < (int)m_compatibleProjectiles.size(); i++) {
+				bool pSel = (m_selectedProjectile == i);
+				if (ImGui::Selectable(m_compatibleProjectiles[i].filename.c_str(), pSel)) {
+					m_selectedProjectile = i;
+					for (int j = 0; j < (int)m_launcher.size(); j++) {
+						if (!m_launcherSelected[j]) continue;
+						m_launcherProjectile[j] = loadProjectileFromJson(m_compatibleProjectiles[i].filename, m_launcher[j].getLatitudeInRad());
+						m_launcher[j].setSpeed(m_compatibleProjectiles[i].muzzleVelocity);
+					}
+				}
+				if (pSel) ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
+		Projectile& projRef = m_launcherProjectile[firstSelected];
+		float mass     = (float)projRef.getMass();
+		float diameter = (float)projRef.getDiameter();
+		float twist    = (float)projRef.getTwistRate();
+		float sf       = (float)projRef.getStabilityFactor();
+		bool projChanged = false;
+		projChanged |= ImGui::DragFloat("Mass (kg)",          &mass,     0.01f,  0.01f, 100.0f);
+		projChanged |= ImGui::DragFloat("Diameter (m)",       &diameter, 0.001f, 0.001f,  0.5f);
+		projChanged |= ImGui::DragFloat("Twist rate (rev/m)", &twist,    0.01f,  0.01f,  10.0f);
+		projChanged |= ImGui::DragFloat("Stability factor",   &sf,       0.01f,  0.5f,    5.0f);
+		if (projChanged) {
+			for (int i = 0; i < (int)m_launcher.size(); i++) {
+				if (!m_launcherSelected[i]) continue;
+				m_launcherProjectile[i].setMass((double)mass);
+				m_launcherProjectile[i].setDiameter((double)diameter);
+				m_launcherProjectile[i].setTwistRate((double)twist);
+				m_launcherProjectile[i].setStabilityFactor((double)sf);
+			}
+		}
+	}
+
+	// ── Placement / Remove ────────────────────────────────────────────────
+	ImGui::Separator();
+	if (selectedCount > 1)
+		ImGui::TextDisabled("Press M to place selected launchers one by one");
+
+	if (selectedCount == 1) {
+		if (ImGui::Button("Place on map"))
+			setLauncherToMap(m_launcher[firstSelected]);
+	}
+
+	if (selectedCount == 1 && (int)m_launcher.size() > 1) {
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
+		if (ImGui::Button("Remove")) {
+			m_launcher.erase(m_launcher.begin() + firstSelected);
+			m_launcherProjectile.erase(m_launcherProjectile.begin() + firstSelected);
+			m_launcherSelected.erase(m_launcherSelected.begin() + firstSelected);
+			m_placementQueueIdx = 0;
+		}
+		ImGui::PopStyleColor();
 	}
 
 	ImGui::End();

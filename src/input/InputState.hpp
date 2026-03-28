@@ -20,7 +20,7 @@ struct InputState {
 
 	bool quit = false;
 
-	float moucePosX, moucePosY;
+	float mousePosX, mousePosY;
 
 
 };

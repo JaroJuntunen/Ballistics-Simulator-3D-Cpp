@@ -11,8 +11,8 @@ using StopFn = std::function<bool(const RigidBodyState&)>;
 
 class Integrator {
 public:
-	static RigidBodyState step(const RigidBodyState& s,const Projectile& projectile,Wind& wind,double phi, double dt, DerivativeFn deriv);
-	static Trajectory simulateSteps(const RigidBodyState& state, Projectile& projectile,Wind wind, double phi,double dt, DerivativeFn deriv, StopFn stop);
+	static RigidBodyState step(const RigidBodyState& s,const Projectile& projectile,Wind& wind, double dt, DerivativeFn deriv);
+	static Trajectory simulateSteps(const RigidBodyState& state, Projectile& projectile,Wind wind,double dt, DerivativeFn deriv, StopFn stop);
 private:
 
 };

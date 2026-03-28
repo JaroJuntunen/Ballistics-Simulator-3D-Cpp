@@ -31,6 +31,7 @@ public:
 	
 	void	initializeDearGUI();
 	void	updateDearGUI();
+	void	updateLauncherManagerGUI();
 	
 	struct CompatibleProjectile {
 		std::string filename;
@@ -39,7 +40,7 @@ public:
 
 	std::vector<std::string>		loadLauncherCatalog();
 	Launcher						loadLauncherFromJson(const std::string& fileName);
-	Projectile						loadProjectileFromJson(const std::string& fileName);
+	Projectile						loadProjectileFromJson(const std::string& fileName, double latitudeRad = 1.04719755);
 	std::vector<std::string>		loadTerrainCatalog();
 	void							switchTerrain(const std::string& path);
 
@@ -48,7 +49,7 @@ public:
 	void	exportTrajectoryTableToCSV(const Trajectory& t);
 
 
-	glm::dvec3	rayFromMouce(float screenX, float screenY);
+	glm::dvec3	rayFromMouse(float screenX, float screenY);
 	void		setLauncherToMap(Launcher& l);
 
 	void		saveScenario(const std::string& path);
@@ -66,14 +67,18 @@ public:
 	std::vector<std::string>		m_terrainCatalog;         // full paths to .hgt files
 	int								m_selectedTerrain = -1;   // -1 = procedural
 	std::vector<std::string>			m_launcherCatalog;
-	int									m_selectedLauncher  = 0;
 	std::vector<CompatibleProjectile>	m_compatibleProjectiles;
 	int									m_selectedProjectile = 0;
-	Launcher					m_launcher	= Launcher({0.0,0.0,0.0}, 0.0, 45.0, 100.0);
-	Projectile					m_projectile = Projectile(45, 0.155, 0.3, 3.937007874, 1.7);
+	std::vector<Launcher>					m_launcher;
+	std::vector<Projectile>					m_launcherProjectile; // one projectile per launcher
+	std::vector<bool>						m_launcherSelected;
+	int										m_placementQueueIdx = 0;
+	Projectile					m_projectile = Projectile(45, 0.155, 0.3, 3.937007874, 1.7, 1.04719755);
 	std::vector<Projectile>		m_listOfProjectiles;
 	Trajectory					m_trajectory;
 	std::vector<Trajectory>		m_listOfTrajectories;
+	std::vector<double>			m_trajectoryAzimuths;
+	std::vector<std::string>	m_trajectoryLabels;
 	
 	Wind	m_wind;
 

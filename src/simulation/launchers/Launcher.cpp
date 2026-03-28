@@ -10,6 +10,4 @@ RigidBodyState Launcher::fire(Projectile projectile) const
 		m_speed * sin(glm::radians(m_elevation))
 	};
 	return initialState;
-	
-
 }

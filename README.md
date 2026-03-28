@@ -78,17 +78,23 @@ All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion 
 ### Simulation
 - Full 3DOF point-mass ballistics: gravity, drag, Coriolis, spin drift, ISA air density
 - Multiple simultaneous trajectories — instant (full RK4 in one frame) or real-time stepping modes
-- Per-trajectory color cycling; persistent path trails until cleared
+- Per-trajectory color cycling; persistent path trails until cleared individually or all at once
 - Projectile deactivation on terrain contact
+
+### Launcher system
+- Any number of launchers active simultaneously, each with its own type, position, angles, and projectile
+- **Launcher Manager** panel (top-right): checkbox list to select launchers for firing and editing; multi-select editing applies changes to all selected
+- `Space` fires all checked launchers in one action, each using its own projectile and muzzle velocity
+- `M` cycles through checked launchers one by one, moving each to the cursor position via ray-terrain intersection
+- Launcher type stored per launcher; switching type reloads compatible projectile list for that launcher only
+- Add and remove launchers at runtime; new launchers auto-load the first catalog entry
 
 ### Catalog and scenario system
 - JSON-based projectile and launcher catalogs (`data/projectiles/`, `data/launchers/`)
 - Launchers: M109 Paladin (155mm), M252 81mm Mortar
 - Projectiles: 155mm HE, 155mm APHE, 81mm HE M821, 81mm Smoke M375, 81mm Illumination M853
 - Compatible projectile list per launcher with per-projectile muzzle velocity
-- Launcher and projectile selection from ImGui dropdowns; parameters shown and editable at runtime
-- Launcher placement in 3D scene: press `M` to move launcher to cursor position via ray-terrain intersection
-- Scenario save/load to JSON (`data/scenarios/`) — persists terrain tile, launcher position/angles, projectile, and wind
+- Scenario save/load to JSON (`data/scenarios/`) — persists terrain tile, all launcher positions/angles/types, per-launcher projectile, and wind
 
 ### Terrain
 - **Real-world terrain** loaded from SRTM3 HGT files (NASA Shuttle Radar Topography Mission, ~90m resolution)
@@ -96,7 +102,7 @@ All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion 
 - Non-square tiles correctly handled: east-west extent shrinks with latitude via `cos(lat)` factor
 - Height queries for terrain contact detection use full-resolution in-RAM data
 - Renderer samples the terrain at uniform world-space intervals; spacing derived from tile extent at load time
-- Runtime terrain switching from ImGui — swap tiles without restarting; launcher height auto-adjusted to new surface
+- Runtime terrain switching from ImGui — swap tiles without restarting; all launcher heights auto-adjusted to new surface
 - **Procedural fallback** (Perlin noise) used when no HGT file is loaded; selectable from the same dropdown
 - HGT files are discovered automatically from `data/terrain/` (recursive scan, subdirectories supported)
 - Tile info shown in UI: origin lat/lon, width and height in km
@@ -105,7 +111,8 @@ All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion 
 ### Rendering and UI
 - Real-time 3D OpenGL rendering with orbit, pan, and zoom camera
 - Dear ImGui panels for all parameters — all values adjustable at runtime
-- Ballistic table output: range, height, drift, speed, and time of flight at 500m intervals; scrollable ImGui table
+- Ballistic table: one collapsing section per trajectory, labeled with launcher and type; range, height, drift, speed, and TOF at 500m intervals; drift calculated using each trajectory's own azimuth
+- Clear individual trajectories or all at once from the ballistic table
 - CSV export with configurable separator (comma, semicolon, tab); auto-numbered files saved to `Exports/`
 
 ---
@@ -114,11 +121,11 @@ All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion 
 
 | Input | Action |
 |---|---|
-| `Space` | Fire projectile from selected launcher |
+| `Space` | Fire all checked launchers |
+| `M` | Move next checked launcher to cursor position on terrain (cycles through checked launchers) |
 | `Left mouse drag` | Orbit camera |
 | `Right mouse drag` | Pan camera |
 | `Scroll wheel` | Zoom |
-| `M` | Move launcher to cursor position on terrain |
 
 ---
 
@@ -200,6 +207,9 @@ Ballistics3D/
 - [x] Launcher placement in 3D scene: ray-terrain intersection from mouse cursor, `M` to place
 - [x] Scenario container: save/load to JSON (terrain, launcher position/angles, projectile, wind)
 - [x] CSV export of trajectory data (configurable separator, auto-numbered files in Exports/)
+- [x] Multiple launcher support: Launcher Manager panel, per-launcher type and projectile, add/remove at runtime
+- [x] `Space` fires all checked launchers; `M` cycles placement through checked launchers
+- [x] Per-trajectory ballistic table with correct drift azimuth per shot; clear individual or all trajectories
 
 **Phase 4 — Fire solution solver and time-on-target**
 - [ ] Target placement on terrain for fire solution mode (click to place target marker)

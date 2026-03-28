@@ -35,9 +35,9 @@ bool ShaderProgram::load(const std::string& vertPath, const std::string& fragPat
 	glAttachShader(m_id, frag);
 	glLinkProgram(m_id);
 
-	int ok;
-	glGetProgramiv(m_id, GL_LINK_STATUS, &ok);
-	if (!ok) {
+	int linked;
+	glGetProgramiv(m_id, GL_LINK_STATUS, &linked);
+	if (!linked) {
 		char log[512];
 		glGetProgramInfoLog(m_id, 512, nullptr, log);
 		std::cerr << "ShaderProgram: link error:\n" << log << "\n";
@@ -73,9 +73,9 @@ unsigned int ShaderProgram::compileShader(unsigned int type, const std::string& 
 	glShaderSource(id, 1, &c, nullptr);
 	glCompileShader(id);
 
-	int ok;
-	glGetShaderiv(id, GL_COMPILE_STATUS, &ok);
-	if (!ok) {
+	int compiled;
+	glGetShaderiv(id, GL_COMPILE_STATUS, &compiled);
+	if (!compiled) {
 		char log[512];
 		glGetShaderInfoLog(id, 512, nullptr, log);
 		std::cerr << "ShaderProgram: compile error ("

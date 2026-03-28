@@ -18,8 +18,8 @@ static glm::dvec3 getSpinDrift(const Projectile& projectile,glm::dvec3 relativeV
 RigidBodyState BallisticsModel::derivative(const RigidBodyState& state ,const Projectile& projectile, Wind& wind, double phi) {
 
 	glm::dvec3	relativeVelocity = state.velocity - wind.getWindSpeed();
-	// Variable air dencity with relative speed compared to wind
-	double	relativeAirDencity = (Physics::rho0 * std::exp(-state.position.z / 8500.0f));
+	// Variable air density with altitude (ISA model)
+	double	relativeAirDensity = (Physics::rho0 * std::exp(-state.position.z / 8500.0f));
 	double	radius = projectile.getDiameter() * 0.5f;
 	double	area = (Physics::pi * (radius * radius));
 	double	velocity = std::sqrt((relativeVelocity.x * relativeVelocity.x) + (relativeVelocity.y * relativeVelocity.y) + (relativeVelocity.z * relativeVelocity.z));
@@ -27,7 +27,7 @@ RigidBodyState BallisticsModel::derivative(const RigidBodyState& state ,const Pr
 	RigidBodyState result;
 	if (velocity < 1e-6) return result;
 
-	double	dragForce = 0.5f * projectile.getDragCoefficientAtVelocity(velocity) * relativeAirDencity * area * (velocity * velocity);
+	double	dragForce = 0.5f * projectile.getDragCoefficientAtVelocity(velocity) * relativeAirDensity * area * (velocity * velocity);
 	double	deceleration = dragForce / projectile.getMass();
 
 
@@ -43,6 +43,6 @@ RigidBodyState BallisticsModel::derivative(const RigidBodyState& state ,const Pr
 
 bool BallisticsModel::hasImpacted(const RigidBodyState &state, const Terrain &terrain)
 {
-	double terrainheight = terrain.heightAt(state.position.x, state.position.y);
-	return state.position.z <= terrainheight;
+	double terrainHeight = terrain.heightAt(state.position.x, state.position.y);
+	return state.position.z <= terrainHeight;
 }

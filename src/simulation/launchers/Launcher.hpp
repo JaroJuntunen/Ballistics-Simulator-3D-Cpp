@@ -1,5 +1,6 @@
 #pragma once
 #include <glm/glm.hpp>
+#include <string>
 #include "simulation/core/RigidBodyState.hpp"
 #include "simulation/projectiles/Projectile.hpp"
 #include "simulation/physics/PhysicsConstants.hpp"
@@ -18,6 +19,7 @@ public:
 	double		getSpeed()        const { return m_speed; }
 	double		getLatitude()     const { return m_latitude; }
 	double		getLatitudeInRad() const { return m_latitude * Physics::deg2rad; }
+	const std::string& getLauncherType() const { return m_launcherType; }
 
 	// Setters
 	void		setPosition(const glm::dvec3& position) { m_position = position; }
@@ -25,6 +27,7 @@ public:
 	void		setElevation(double elevation) { m_elevation = elevation; }
 	void		setSpeed(double speed)         { m_speed = speed; }
 	void		setLatitude(double latitude)   { m_latitude = latitude; }
+	void		setLauncherType(const std::string& type) { m_launcherType = type; }
 
 private:
 	glm::dvec3	m_position = {0.0, 0.0, 0.0};
@@ -32,5 +35,6 @@ private:
 	double		m_elevation = 45.0;
 	double		m_speed = 100.0;
 
-	double		m_latitude = 60.0;
+	double		m_latitude    = 60.0;
+	std::string	m_launcherType = "";
 };

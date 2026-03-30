@@ -24,9 +24,9 @@ bool Application::init() {
 	if (!m_launcherCatalog.empty()) {
 		l = loadLauncherFromJson(m_launcherCatalog[0]);
 		l.setPosition({0.0, 0.0, groundZ + 1.0});
-		if (!m_compatibleProjectiles.empty()) {
+		if (!m_compatibleProjectiles.empty() && !m_compatibleProjectiles[0].charges.empty()) {
 			m_projectile = loadProjectileFromJson(m_compatibleProjectiles[0].filename);
-			l.setSpeed(m_compatibleProjectiles[0].muzzleVelocity);
+			l.setSpeed(m_compatibleProjectiles[0].charges[0].muzzleVelocity);
 		}
 		l.setLauncherType(m_launcherCatalog[0]);
 	} else {
@@ -216,6 +216,31 @@ void Application::handleInput() {
 			indices.push_back(i);
 		}
 		
+		for (int f = 0; f < (int)futures.size(); f++)
+			m_solvedFireSolutions[indices[f]] = futures[f].get();
+	}
+
+	if(in.keyShiftT){
+		glm::dvec3 targetPos = getPositionOnMap(m_input.state().mousePosX,m_input.state().mousePosY);
+		std::vector<std::future<SolvedFireSolutions>> futures;
+		std::vector<int> indices;
+		
+		for (int i = 0; i < (int)m_launcher.size(); i++) {
+			if (!m_launcherSelected[i]) continue;
+			Projectile proj = m_launcherProjectile[i];
+			futures.push_back(std::async(std::launch::async, [&, i, proj]() {
+			SolvedFireSolutions results;
+			for (const auto& charge : m_compatibleProjectiles[m_selectedProjectile].charges) {
+				Launcher copy = m_launcher[i];
+				copy.setSpeed(charge.muzzleVelocity);
+				auto sols = FireSolutionSolver::solveFireSolutionForLauncher(
+					copy, *m_terrain, proj, m_wind, targetPos);
+				for (auto& s : sols) results.push_back(s);
+			}
+			return results;
+			}));
+			indices.push_back(i);
+		}
 		for (int f = 0; f < (int)futures.size(); f++)
 			m_solvedFireSolutions[indices[f]] = futures[f].get();
 	}

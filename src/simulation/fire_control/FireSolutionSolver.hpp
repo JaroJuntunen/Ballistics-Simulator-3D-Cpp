@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include "simulation/core/Integrator.hpp"
 #include "simulation/launchers/Launcher.hpp"
 #include "simulation/environment/Terrain.hpp"
@@ -9,6 +10,7 @@ struct FireSolution {
 	double azimuth_deg  = 0.0;
 	double elevation_deg = 0.0;
 	double tof_s        = 0.0;
+	double muzzle_velocity = 0.0;
 	bool   valid        = false;
 };
 

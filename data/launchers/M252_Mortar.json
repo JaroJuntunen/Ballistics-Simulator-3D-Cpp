@@ -4,9 +4,40 @@
     "azimuth_deg": 0.0,
     "elevation_deg": 70.0,
     "latitude_deg": 60.0,
+    "min_elevation_deg": 45.0,
+    "max_elevation_deg": 85.0,
+    "reload_time_s": 4.0,
+    "max_burst_rounds": 4,
     "compatible_projectiles": [
-        { "projectile": "81mm_HE_M821.json",    "muzzle_velocity_ms": 300.0 },
-        { "projectile": "81mm_Smoke_M375.json",  "muzzle_velocity_ms": 280.0 },
-        { "projectile": "81mm_Illum_M853.json",  "muzzle_velocity_ms": 260.0 }
+        {
+            "projectile": "81mm_HE_M821.json",
+            "charges": [
+                { "name": "Charge 0", "muzzle_velocity_ms": 73.0 },
+                { "name": "Charge 1", "muzzle_velocity_ms": 130.0 },
+                { "name": "Charge 2", "muzzle_velocity_ms": 180.0 },
+                { "name": "Charge 3", "muzzle_velocity_ms": 230.0 },
+                { "name": "Charge 4", "muzzle_velocity_ms": 300.0 }
+            ]
+        },
+        {
+            "projectile": "81mm_Smoke_M375.json",
+            "charges": [
+                { "name": "Charge 0", "muzzle_velocity_ms": 68.0 },
+                { "name": "Charge 1", "muzzle_velocity_ms": 120.0 },
+                { "name": "Charge 2", "muzzle_velocity_ms": 170.0 },
+                { "name": "Charge 3", "muzzle_velocity_ms": 213.0 },
+                { "name": "Charge 4", "muzzle_velocity_ms": 280.0 }
+            ]
+        },
+        {
+            "projectile": "81mm_Illum_M853.json",
+            "charges": [
+                { "name": "Charge 0", "muzzle_velocity_ms": 62.0 },
+                { "name": "Charge 1", "muzzle_velocity_ms": 110.0 },
+                { "name": "Charge 2", "muzzle_velocity_ms": 160.0 },
+                { "name": "Charge 3", "muzzle_velocity_ms": 200.0 },
+                { "name": "Charge 4", "muzzle_velocity_ms": 260.0 }
+            ]
+        }
     ]
 }

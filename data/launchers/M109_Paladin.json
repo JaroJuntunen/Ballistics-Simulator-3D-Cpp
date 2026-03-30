@@ -4,8 +4,34 @@
     "azimuth_deg": 0.0,
     "elevation_deg": 30.0,
     "latitude_deg": 60.0,
+    "min_elevation_deg": 0.0,
+    "max_elevation_deg": 65.0,
+    "reload_time_s": 8.0,
+    "max_burst_rounds": 3,
     "compatible_projectiles": [
-        { "projectile": "155mm_HE.json",   "muzzle_velocity_ms": 900.0 },
-        { "projectile": "155mm_APHE.json", "muzzle_velocity_ms": 850.0 }
+        {
+            "projectile": "155mm_HE.json",
+            "charges": [
+                { "name": "Charge 1", "muzzle_velocity_ms": 225.0 },
+                { "name": "Charge 2", "muzzle_velocity_ms": 283.0 },
+                { "name": "Charge 3", "muzzle_velocity_ms": 373.0 },
+                { "name": "Charge 4", "muzzle_velocity_ms": 441.0 },
+                { "name": "Charge 5", "muzzle_velocity_ms": 563.0 },
+                { "name": "Charge 6", "muzzle_velocity_ms": 625.0 },
+                { "name": "Charge 7", "muzzle_velocity_ms": 684.0 },
+                { "name": "Charge 8", "muzzle_velocity_ms": 827.0 }
+            ]
+        },
+        {
+            "projectile": "155mm_APHE.json",
+            "charges": [
+                { "name": "Charge 3", "muzzle_velocity_ms": 350.0 },
+                { "name": "Charge 4", "muzzle_velocity_ms": 420.0 },
+                { "name": "Charge 5", "muzzle_velocity_ms": 530.0 },
+                { "name": "Charge 6", "muzzle_velocity_ms": 595.0 },
+                { "name": "Charge 7", "muzzle_velocity_ms": 650.0 },
+                { "name": "Charge 8", "muzzle_velocity_ms": 790.0 }
+            ]
+        }
     ]
 }

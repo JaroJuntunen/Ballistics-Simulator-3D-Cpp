@@ -35,9 +35,14 @@ public:
 	void	updateDearGUI();
 	void	updateLauncherManagerGUI();
 	
-	struct CompatibleProjectile {
-		std::string filename;
+	struct ChargeLevel {
+		std::string name;
 		double      muzzleVelocity;
+	};
+
+	struct CompatibleProjectile {
+		std::string            filename;
+		std::vector<ChargeLevel> charges;
 	};
 
 	std::vector<std::string>		loadLauncherCatalog();
@@ -76,6 +81,8 @@ public:
 	std::vector<std::string>			m_launcherCatalog;
 	std::vector<CompatibleProjectile>	m_compatibleProjectiles;
 	int									m_selectedProjectile = 0;
+	int									m_selectedCharge     = 0;
+	bool								m_mrsiLongestTof     = true;
 	std::vector<Launcher>				m_launcher;
 	std::vector<Projectile>				m_launcherProjectile; // one projectile per launcher
 	std::vector<bool>					m_launcherSelected;
@@ -92,8 +99,11 @@ public:
 
 	bool m_running = false;
 
-	std::vector<std::array<bool, 2>> m_MRSI_ProjectileLaunched;
-	double	m_MRSI_timer = 0;
-	double	m_MRSI_secuanceLength;
-	bool	m_MRSI_onGoing = false;
+	int									m_MRSI_burstSize = 1;
+	std::vector<int>					m_MRSI_launcherBurstLeft;
+	std::vector<std::vector<bool>>		m_MRSI_ProjectileLaunched;
+	std::vector<double>					m_MRSI_launcherNextFireTime;
+	double								m_MRSI_timer = 0;
+	double								m_MRSI_secuanceLength;
+	bool								m_MRSI_onGoing	= false;
 };

@@ -50,16 +50,32 @@ Launcher Application::loadLauncherFromJson(const std::string& fileName)
 
 	m_compatibleProjectiles.clear();
 	m_selectedProjectile = 0;
+	m_selectedCharge     = 0;
 	for (const auto& cp : j["compatible_projectiles"]) {
 		std::string name = cp["projectile"].get<std::string>();
 		if (name.size() > 5 && name.substr(name.size() - 5) == ".json")
 			name = name.substr(0, name.size() - 5);
-		m_compatibleProjectiles.push_back({ name, cp["muzzle_velocity_ms"].get<double>() });
+		Application::CompatibleProjectile entry;
+		entry.filename = name;
+		for (const auto& ch : cp["charges"]) {
+			Application::ChargeLevel cl;
+			cl.name          = ch["name"].get<std::string>();
+			cl.muzzleVelocity = ch["muzzle_velocity_ms"].get<double>();
+			entry.charges.push_back(cl);
+		}
+		m_compatibleProjectiles.push_back(std::move(entry));
 	}
 
-	double speed = m_compatibleProjectiles.empty() ? 900.0 : m_compatibleProjectiles[0].muzzleVelocity;
+	double speed = 900.0;
+	if (!m_compatibleProjectiles.empty() && !m_compatibleProjectiles[0].charges.empty())
+		speed = m_compatibleProjectiles[0].charges[0].muzzleVelocity;
+
 	Launcher launcher(position, azimuth, elevation, speed);
 	launcher.setLatitude(latitude);
+	launcher.setMinElevation(j.value("min_elevation_deg", 0.0));
+	launcher.setMaxElevation(j.value("max_elevation_deg", 90.0));
+	launcher.setReloadTime(j.value("reload_time_s", 5.0));
+	launcher.setMaxBurstRounds(j.value("max_burst_rounds", 1));
 	return launcher;
 }
 

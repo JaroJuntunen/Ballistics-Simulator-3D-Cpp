@@ -236,7 +236,6 @@ void Application::updateLauncherManagerGUI()
 	m_launcherProjectile.resize(m_launcher.size(), m_projectile);
 	m_launcherSelected.resize(m_launcher.size(), false);
 	m_solvedFireSolutions.resize(m_launcher.size());
-	m_solvedFireSolutions.resize(m_launcher.size());
 	m_MRSI_ProjectileLaunched.resize(m_launcher.size());
 
 	if (ImGui::Button("+ Add Launcher")) {
@@ -249,8 +248,8 @@ void Application::updateLauncherManagerGUI()
 			Projectile newP = !m_compatibleProjectiles.empty()
 				? loadProjectileFromJson(m_compatibleProjectiles[0].filename, m_launcher.back().getLatitudeInRad())
 				: m_projectile;
-			if (!m_compatibleProjectiles.empty())
-				m_launcher.back().setSpeed(m_compatibleProjectiles[0].muzzleVelocity);
+			if (!m_compatibleProjectiles.empty() && !m_compatibleProjectiles[0].charges.empty())
+				m_launcher.back().setSpeed(m_compatibleProjectiles[0].charges[m_selectedCharge].muzzleVelocity);
 			m_launcherProjectile.push_back(newP);
 			m_launcher.back().setLauncherType(entry);
 		} else {
@@ -323,6 +322,18 @@ void Application::updateLauncherManagerGUI()
 
 	}
 	if (validSelecedLaunchersWhitSolutions){
+		int tofPriority = m_mrsiLongestTof ? 1 : 0;
+		ImGui::RadioButton("Shortest TOF", &tofPriority, 0); ImGui::SameLine();
+		ImGui::RadioButton("Longest TOF",  &tofPriority, 1);
+		m_mrsiLongestTof = (tofPriority == 1);
+
+		int maxBurst = 1;
+		for (int i = 0; i < (int)m_launcher.size(); i++)
+			if (m_launcherSelected[i])
+				maxBurst = std::max(maxBurst, m_launcher[i].getMaxBurstRounds());
+		m_MRSI_burstSize = std::clamp(m_MRSI_burstSize, 1, maxBurst);
+		ImGui::SliderInt("Burst size", &m_MRSI_burstSize, 1, maxBurst);
+
 		if (!m_MRSI_onGoing) {
 			if (ImGui::Button("TOT/MRSI Launch")) {
 				setMRSIinMotion();
@@ -381,9 +392,9 @@ void Application::updateLauncherManagerGUI()
 						m_launcher[i] = loadLauncherFromJson(entry);
 						m_launcher[i].setPosition(savedPos);
 						m_launcher[i].setLauncherType(entry);
-						if (!m_compatibleProjectiles.empty()) {
+						if (!m_compatibleProjectiles.empty() && !m_compatibleProjectiles[0].charges.empty()) {
 							m_launcherProjectile[i] = loadProjectileFromJson(m_compatibleProjectiles[0].filename, m_launcher[i].getLatitudeInRad());
-							m_launcher[i].setSpeed(m_compatibleProjectiles[0].muzzleVelocity);
+							m_launcher[i].setSpeed(m_compatibleProjectiles[0].charges[m_selectedCharge].muzzleVelocity);
 						}
 					}
 				}
@@ -426,15 +437,38 @@ void Application::updateLauncherManagerGUI()
 				bool pSel = (m_selectedProjectile == i);
 				if (ImGui::Selectable(m_compatibleProjectiles[i].filename.c_str(), pSel)) {
 					m_selectedProjectile = i;
+					m_selectedCharge = 0;
 					for (int j = 0; j < (int)m_launcher.size(); j++) {
 						if (!m_launcherSelected[j]) continue;
 						m_launcherProjectile[j] = loadProjectileFromJson(m_compatibleProjectiles[i].filename, m_launcher[j].getLatitudeInRad());
-						m_launcher[j].setSpeed(m_compatibleProjectiles[i].muzzleVelocity);
+						if (!m_compatibleProjectiles[i].charges.empty())
+							m_launcher[j].setSpeed(m_compatibleProjectiles[i].charges[0].muzzleVelocity);
 					}
 				}
 				if (pSel) ImGui::SetItemDefaultFocus();
 			}
 			ImGui::EndCombo();
+		}
+
+		// ── Charge selector ───────────────────────────────────────────────────
+		const auto& charges = m_compatibleProjectiles[m_selectedProjectile].charges;
+		if (!charges.empty()) {
+			const std::string& chargeCurrent = charges[m_selectedCharge].name;
+			if (ImGui::BeginCombo("Charge##lmgr", chargeCurrent.c_str())) {
+				for (int i = 0; i < (int)charges.size(); i++) {
+					bool cSel = (m_selectedCharge == i);
+					if (ImGui::Selectable(charges[i].name.c_str(), cSel)) {
+						m_selectedCharge = i;
+						for (int j = 0; j < (int)m_launcher.size(); j++) {
+							if (!m_launcherSelected[j]) continue;
+							m_launcher[j].setSpeed(charges[i].muzzleVelocity);
+						}
+					}
+					if (cSel) ImGui::SetItemDefaultFocus();
+				}
+				ImGui::EndCombo();
+			}
+			ImGui::Text("Muzzle velocity: %.0f m/s", charges[m_selectedCharge].muzzleVelocity);
 		}
 		Projectile& projRef = m_launcherProjectile[firstSelected];
 		float mass     = (float)projRef.getMass();

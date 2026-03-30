@@ -13,7 +13,7 @@ void InputHandler::poll(SDL_Window* window) {
 	m_state.keyR        = false;
 	m_state.keyM		= false;
 	m_state.keyT		= false;
-
+	m_state.keyShiftT	= false;
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
 		ImGui_ImplSDL3_ProcessEvent(&event);
@@ -56,7 +56,10 @@ void InputHandler::poll(SDL_Window* window) {
 				SDL_GetMouseState(&m_state.mousePosX, &m_state.mousePosY);
 				break;
 			case SDLK_T:
-				m_state.keyT	= true;
+				if(mods & SDL_KMOD_SHIFT)
+					m_state.keyShiftT = true;
+				else
+					m_state.keyT	= true;
 				SDL_GetMouseState(&m_state.mousePosX, &m_state.mousePosY);
 				break;
 			default: break;

@@ -19,38 +19,45 @@ SolvedFireSolutions FireSolutionSolver::solveFireSolutionForLauncher(const Launc
 	RigidBodyState initialState = l.fire(proj);
 	Trajectory trajectory;
 	RigidBodyState landing;
-	for (double testEl = 30.0; testEl <= 60.0; testEl += 5.0) {
+	for (double testEl = launcher.getMinElevation(); testEl <= launcher.getMaxElevation(); testEl += 5.0) {
 		l.setElevation(testEl);
 		initialState = l.fire(proj);
 		trajectory = Integrator::simulateSteps(initialState, proj, wind, 0.01, BallisticsModel::derivative, stop);
 		landing = trajectory.back();
 		maxRange = std::max(maxRange, getLandingDistance(l, landing.position));
 	}
-	if (maxRange < distanceToTarget)
+	if (maxRange < distanceToTarget) {
+		solvedSolutions.push_back(FireSolution{});
+		solvedSolutions.push_back(FireSolution{});
 		return solvedSolutions;
+	}
 	double initialAzimuth = l.getAzimuth();
 	glm::dvec2 forward = glm::normalize(glm::dvec2(toTarget.x, toTarget.y));
 	glm::dvec2 right   = { forward.y, -forward.x };
-
+	double launcherMidAngle = ( launcher.getMinElevation() + launcher.getMaxElevation()) / 2;
+	std::vector<std::vector<double>> angle;
+	
 	for (int k = 0; k < 2; k++)
 	{
 		l.setAzimuth(initialAzimuth);
-
+		
 		for (int iterate = 0; iterate < 3; iterate++)
 		{
-			double angle[2] = { k * 45.0, 45.0 + k * 45.0 };
-			while (angle[1] - angle[0] > 0.01)
+			angle.clear();
+			angle.push_back({launcher.getMinElevation(), launcherMidAngle});
+			angle.push_back({launcherMidAngle, launcher.getMaxElevation()});
+			while (angle[k][1] - angle[k][0] > 0.01)
 			{
-				double midAngle = (angle[0] + angle[1]) * 0.5;
+				double midAngle = (angle[k][0] + angle[k][1]) * 0.5;
 				l.setElevation(midAngle);
 				initialState = l.fire(proj);
 				trajectory = Integrator::simulateSteps(initialState, proj, wind, 0.01, BallisticsModel::derivative, stop);
 				landing = trajectory.back();
 				bool landsShort = getLandingDistance(l, landing.position) < distanceToTarget;
 				if (k == 0 ? landsShort : !landsShort)
-					angle[0] = midAngle;
+					angle[k][0] = midAngle;
 				else
-					angle[1] = midAngle;
+					angle[k][1] = midAngle;
 			}
 
 			double lateralError = glm::dot(
@@ -72,6 +79,7 @@ SolvedFireSolutions FireSolutionSolver::solveFireSolutionForLauncher(const Launc
 		sol.azimuth_deg   = l.getAzimuth();
 		sol.elevation_deg = l.getElevation();
 		sol.tof_s         = (double)trajectory.size() * 0.01;
+		sol.muzzle_velocity = launcher.getSpeed();
 		sol.valid         = totalError <= 100.0;
 		solvedSolutions.push_back(sol);
 	}

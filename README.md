@@ -90,25 +90,32 @@ All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion 
 - Add and remove launchers at runtime; new launchers auto-load the first catalog entry
 
 ### Fire solution solver
-- `T` places a target at the cursor position on terrain and immediately solves for all checked launchers in parallel (multithreaded via `std::async`)
-- Per-launcher binary search solver: finds both **direct attack** (low angle, 0–45°) and **high angle** (plunging fire, 45–90°) solutions independently
-- Each bracket runs its own azimuth correction loop (3 iterations) to account for Coriolis and wind drift — direct attack and high angle converge to different azimuths
-- Actual maximum range computed by sweeping 30–60° to handle drag-shifted optimum (not assumed to be 45°)
+- `T` solves fire solutions for all checked launchers using the currently selected charge, in parallel (multithreaded via `std::async`)
+- `Shift+T` solves for all charge levels of the selected projectile — up to 16 solutions per launcher (8 charges × 2 elevation brackets) for the M109
+- Per-launcher binary search solver: two elevation brackets derived from the launcher's `min_elevation_deg` and `max_elevation_deg`, split at the midpoint
+- Each bracket runs its own azimuth correction loop (3 iterations) to account for Coriolis and wind drift
+- Maximum range sweep uses the launcher's actual elevation range; out-of-range charges return 2 invalid (N/A) solutions to keep the list consistent
 - Solutions validated against a 100m landing error threshold; invalid solutions shown as N/A in the UI
-- Fire solution results shown in the Launcher Manager per launcher: azimuth, elevation, TOF; **Apply** button sets the launcher angles directly
+- Fire solution results shown in the Launcher Manager per launcher: azimuth, elevation, TOF, muzzle velocity; **Apply** button sets the launcher angles directly
 
 ### Time-on-target (TOT / MRSI)
 - **TOT/MRSI Launch** button appears in the Launcher Manager when at least one selected launcher has a valid fire solution
-- Staggered launch sequence: the launcher with the longest TOF fires first; each subsequent launcher fires progressively later so all rounds arrive simultaneously
-- At launch time, azimuth and elevation are automatically applied from the fire solution — no manual Apply step needed
+- **TOF priority selector** (Shortest / Longest): shortest minimises total sequence duration; longest maximises flight time.
+- **Burst size selector**: how many rounds per launcher to include in the sequence, capped at the launcher's `max_burst_rounds`
+- Solutions sorted by TOF priority at launch time — burst pulls from the preferred end of the sorted solution list
+- Staggered launch sequence: sequence length anchored to the longest TOF among burst-selected solutions; each launcher fires when `timer >= sequenceLength - tof`
+- Reload time enforced per launcher between consecutive shots — a second shot from the same barrel cannot fire until `reloadTime` seconds after the previous
+- At launch time, azimuth, elevation, and muzzle velocity are automatically applied from the fire solution
 - While the sequence is running the button is replaced by a status line showing total TOF and live time-to-target countdown
-- Sequence ends automatically once all valid solutions have been launched
+- Sequence ends automatically once all burst rounds have been launched
 
 ### Catalog and scenario system
 - JSON-based projectile and launcher catalogs (`data/projectiles/`, `data/launchers/`)
 - Launchers: M109 Paladin (155mm), M252 81mm Mortar
 - Projectiles: 155mm HE, 155mm APHE, 81mm HE M821, 81mm Smoke M375, 81mm Illumination M853
-- Compatible projectile list per launcher with per-projectile muzzle velocity
+- Per-projectile charge ladder in launcher JSON: each charge has a name and muzzle velocity (M109 HE has 8 charges, M252 rounds have 5)
+- Per-launcher `min_elevation_deg`, `max_elevation_deg`, `reload_time_s`, `max_burst_rounds` in JSON
+- Charge selector in GUI; selected charge used for `T` solve and for `Space` firing
 - Scenario save/load to JSON (`data/scenarios/`) — persists terrain tile, all launcher positions/angles/types, per-launcher projectile, and wind
 
 ### Terrain
@@ -138,7 +145,8 @@ All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion 
 |---|---|
 | `Space` | Fire all checked launchers |
 | `M` | Move next checked launcher to cursor position on terrain (cycles through checked launchers) |
-| `T` | Place target at cursor position and solve fire solutions for all checked launchers |
+| `T` | Place target at cursor position and solve fire solutions for selected charge |
+| `Shift+T` | Solve fire solutions for all charge levels of the selected projectile |
 | `Left mouse drag` | Orbit camera |
 | `Right mouse drag` | Pan camera |
 | `Scroll wheel` | Zoom |
@@ -237,6 +245,11 @@ Ballistics3D/
 - [x] Fire solution results panel per launcher with Apply buttons; invalid solutions shown as N/A
 - [x] TOT/MRSI staggered launch sequence: max-TOF launcher fires first, others delayed for simultaneous impact
 - [x] TOT/MRSI Launch button (conditional on valid solutions); in-progress countdown display
+- [x] Variable charge levels per projectile in launcher JSON (name + muzzle velocity per charge)
+- [x] Charge selector in GUI; `T` solves for selected charge, `Shift+T` solves all charges for selected projectile
+- [x] Reload time (s/round) and max burst round count per launcher in JSON; reload time enforced between shots in burst sequence
+- [x] Per-launcher min/max elevation angles in JSON; solver uses these as bracket bounds
+- [x] MRSI TOF priority selector (shortest / longest) and burst size selector
 
 **Phase 5 — 6DOF physics and mesh-based aerodynamics**
 - [ ] Assimp mesh loading for projectile geometry

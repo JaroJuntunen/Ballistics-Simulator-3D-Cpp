@@ -17,7 +17,8 @@ typedef std::vector<FireSolution> SolvedFireSolutions;
 class FireSolutionSolver {
 	public:
 		//returns if it found a fireSolution
-		static SolvedFireSolutions FireSolutionSolver::solveFireSolutionForLauncher(const Launcher& launcher, Terrain& terrain, Projectile proj, Wind wind, glm::dvec3 target);
+		static SolvedFireSolutions solveFireSolutionForLauncher(const Launcher& launcher, Terrain& terrain, Projectile proj, Wind wind, glm::dvec3 target);
+
 	private:
 	static double	getLandingDistance(const Launcher &l,const glm::dvec3& landingPoint);
 };

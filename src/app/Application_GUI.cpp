@@ -237,6 +237,7 @@ void Application::updateLauncherManagerGUI()
 	m_launcherSelected.resize(m_launcher.size(), false);
 	m_solvedFireSolutions.resize(m_launcher.size());
 	m_solvedFireSolutions.resize(m_launcher.size());
+	m_MRSI_ProjectileLaunched.resize(m_launcher.size());
 
 	if (ImGui::Button("+ Add Launcher")) {
 		double groundZ = m_terrain->heightAt(0.0f, 0.0f);
@@ -309,6 +310,29 @@ void Application::updateLauncherManagerGUI()
 		}
 
 		ImGui::PopID();
+	}
+	bool validSelecedLaunchersWhitSolutions = false;
+	for (int i = 0; i < m_launcher.size() && !validSelecedLaunchersWhitSolutions; i++) {
+		if(!m_launcherSelected[i]) continue;
+		for(int k = 0; k < m_solvedFireSolutions[i].size(); k++) {
+			if (m_solvedFireSolutions[i][k].valid) {
+				validSelecedLaunchersWhitSolutions = true;
+				break;
+			}
+		}
+
+	}
+	if (validSelecedLaunchersWhitSolutions){
+		if (!m_MRSI_onGoing) {
+			if (ImGui::Button("TOT/MRSI Launch")) {
+				setMRSIinMotion();
+			}
+		}
+		else
+		{
+			ImGui::TextDisabled("MRSI In progress...");
+			ImGui::Text("TOF %.1fs, Time to target %.lfs", m_MRSI_secuanceLength, (m_MRSI_secuanceLength - m_MRSI_timer) );
+		}
 	}
 
 	// Collect selected indices
@@ -451,6 +475,7 @@ void Application::updateLauncherManagerGUI()
 			m_launcherProjectile.erase(m_launcherProjectile.begin() + firstSelected);
 			m_launcherSelected.erase(m_launcherSelected.begin() + firstSelected);
 			m_solvedFireSolutions.erase(m_solvedFireSolutions.begin() + firstSelected);
+			m_MRSI_ProjectileLaunched.erase(m_MRSI_ProjectileLaunched.begin() + firstSelected);
 			m_placementQueueIdx = 0;
 		}
 		ImGui::PopStyleColor();

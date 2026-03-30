@@ -97,6 +97,13 @@ All simulation state is kept in double precision (`dvec3`, `dquat`). Conversion 
 - Solutions validated against a 100m landing error threshold; invalid solutions shown as N/A in the UI
 - Fire solution results shown in the Launcher Manager per launcher: azimuth, elevation, TOF; **Apply** button sets the launcher angles directly
 
+### Time-on-target (TOT / MRSI)
+- **TOT/MRSI Launch** button appears in the Launcher Manager when at least one selected launcher has a valid fire solution
+- Staggered launch sequence: the launcher with the longest TOF fires first; each subsequent launcher fires progressively later so all rounds arrive simultaneously
+- At launch time, azimuth and elevation are automatically applied from the fire solution — no manual Apply step needed
+- While the sequence is running the button is replaced by a status line showing total TOF and live time-to-target countdown
+- Sequence ends automatically once all valid solutions have been launched
+
 ### Catalog and scenario system
 - JSON-based projectile and launcher catalogs (`data/projectiles/`, `data/launchers/`)
 - Launchers: M109 Paladin (155mm), M252 81mm Mortar
@@ -228,8 +235,8 @@ Ballistics3D/
 - [x] Both direct attack and high angle solutions with independent azimuth convergence
 - [x] Parallel solving across launchers via `std::async`
 - [x] Fire solution results panel per launcher with Apply buttons; invalid solutions shown as N/A
-- [ ] TOTSolver: compute staggered launch times
-- [ ] TOT execution sequence with countdown
+- [x] TOT/MRSI staggered launch sequence: max-TOF launcher fires first, others delayed for simultaneous impact
+- [x] TOT/MRSI Launch button (conditional on valid solutions); in-progress countdown display
 
 **Phase 5 — 6DOF physics and mesh-based aerodynamics**
 - [ ] Assimp mesh loading for projectile geometry

@@ -57,6 +57,7 @@ void Application::run() {
 
 		updateDearGUI();
 		handleInput();
+		fireControlMRSI(dt);
 		iterateProjectilesTrajectories(dt);
 		render();
 	}
@@ -202,23 +203,21 @@ void Application::handleInput() {
 	}
 
 	if(in.keyT) {
-		if(in.keyT) {
-			glm::dvec3 targetPos = getPositionOnMap(m_input.state().mousePosX,m_input.state().mousePosY);
-			std::vector<std::future<SolvedFireSolutions>> futures;
-			std::vector<int> indices;
-			
-			for (int i = 0; i < (int)m_launcher.size(); i++) {
-				if (!m_launcherSelected[i]) continue;
-				Projectile proj = m_launcherProjectile[i];
-				futures.push_back(std::async(std::launch::async,
-					FireSolutionSolver::solveFireSolutionForLauncher,
-					m_launcher[i], std::ref(*m_terrain), proj, m_wind, targetPos));
-				indices.push_back(i);
-			}
-			
-			for (int f = 0; f < (int)futures.size(); f++)
-				m_solvedFireSolutions[indices[f]] = futures[f].get();
+		glm::dvec3 targetPos = getPositionOnMap(m_input.state().mousePosX,m_input.state().mousePosY);
+		std::vector<std::future<SolvedFireSolutions>> futures;
+		std::vector<int> indices;
+		
+		for (int i = 0; i < (int)m_launcher.size(); i++) {
+			if (!m_launcherSelected[i]) continue;
+			Projectile proj = m_launcherProjectile[i];
+			futures.push_back(std::async(std::launch::async,
+				FireSolutionSolver::solveFireSolutionForLauncher,
+				m_launcher[i], std::ref(*m_terrain), proj, m_wind, targetPos));
+			indices.push_back(i);
 		}
+		
+		for (int f = 0; f < (int)futures.size(); f++)
+			m_solvedFireSolutions[indices[f]] = futures[f].get();
 	}
 }
 

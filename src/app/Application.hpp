@@ -58,6 +58,10 @@ public:
 	void		saveScenario(const std::string& path);
 	void		loadScenario(const std::string& path);
 
+	void setMRSIinMotion();
+	void fireControlMRSI(double dt);
+
+
 	GLContext					m_context;
 	Camera						m_camera;
 	Renderer					m_renderer;
@@ -87,4 +91,9 @@ public:
 	Wind	m_wind;
 
 	bool m_running = false;
+
+	std::vector<std::array<bool, 2>> m_MRSI_ProjectileLaunched;
+	double	m_MRSI_timer = 0;
+	double	m_MRSI_secuanceLength;
+	bool	m_MRSI_onGoing = false;
 };
